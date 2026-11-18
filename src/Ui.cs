@@ -3,6 +3,12 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 namespace EtiquetaLocal {
+ public class SingleLineLabel:System.Windows.Forms.Label {
+  readonly ToolTip fullText=new ToolTip();
+  protected override void OnTextChanged(EventArgs e){base.OnTextChanged(e);fullText.SetToolTip(this,Text);}
+  protected override void OnPaint(PaintEventArgs e){TextRenderer.DrawText(e.Graphics,Text,Font,new Rectangle(Padding.Left,Padding.Top,Math.Max(0,ClientSize.Width-Padding.Horizontal),Math.Max(0,ClientSize.Height-Padding.Vertical)),Enabled?ForeColor:SystemColors.GrayText,TextFormatFlags.SingleLine|TextFormatFlags.EndEllipsis|TextFormatFlags.VerticalCenter|TextFormatFlags.NoPrefix);}
+  protected override void Dispose(bool disposing){if(disposing)fullText.Dispose();base.Dispose(disposing);}
+ }
  public static class Ui {
   static readonly ToolTip Tips=new ToolTip();
   public static Button Action(string icon,string text,Action action,int width=218,bool primary=false){

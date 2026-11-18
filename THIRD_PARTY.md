@@ -9,3 +9,7 @@ No se incluyen firmware, instaladores ni controladores de los fabricantes. Las r
 ## Generación QR
 
 QRCoder 1.4.3, por Raffael Herrmann y colaboradores. Licencia MIT incluida en lib/QRCoder-LICENSE.txt y en la distribución. DLL net40 obtenida del paquete oficial https://www.nuget.org/packages/QRCoder/1.4.3 (https://github.com/codebude/QRCoder). La biblioteca se ejecuta localmente; no recibe actualizaciones automáticas.
+
+## Construcción del instalador
+
+Inno Setup 7.1.1, de sus autores y colaboradores: https://jrsoftware.org/inno-setup y https://github.com/jrsoftware/issrc. Se utiliza como herramienta de compilación y no se incluye su compilador en el repositorio. El autor de Impresorapp es Alberto Marín (albertuxo85); la autoría de las dependencias se mantiene separada.

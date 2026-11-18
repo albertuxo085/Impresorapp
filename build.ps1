@@ -1,4 +1,4 @@
-﻿param([switch]$Test,[string]$OutputDirectory)
+﻿param([switch]$Test,[string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $out = Join-Path $root 'dist'
@@ -23,7 +23,7 @@ if ($versionText -notmatch '^\d+\.\d+(\.\d+){0,2}$') { throw 'VERSION debe conte
 $parsed = [Version]::Parse($versionText)
 $assemblyVersion = '{0}.{1}.{2}.{3}' -f $parsed.Major,$parsed.Minor,[Math]::Max(0,$parsed.Build),[Math]::Max(0,$parsed.Revision)
 $versionSource = Join-Path $out 'AppVersion.g.cs'
-$versionCode = 'using System.Reflection; [assembly:AssemblyVersion("'+$assemblyVersion+'")] [assembly:AssemblyFileVersion("'+$assemblyVersion+'")] [assembly:AssemblyProduct("Impresorapp")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="'+$versionText+'"; } }'
+$versionCode = 'using System.Reflection; [assembly:AssemblyVersion("'+$assemblyVersion+'")] [assembly:AssemblyFileVersion("'+$assemblyVersion+'")] [assembly:AssemblyProduct("Impresorapp")] [assembly:AssemblyCompany("Alberto Marín (albertuxo85)")] [assembly:AssemblyCopyright("Copyright © 2026 Alberto Marín (albertuxo85)")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="'+$versionText+'"; } }'
 [IO.File]::WriteAllText($versionSource,$versionCode)
 $exe = Join-Path $out ('Impresorapp-'+$versionText+'.exe')
 $arguments = @(('/win32icon:'+(Join-Path $root 'assets\EtiquetaLocal.ico')),'/nologo','/target:winexe',('/out:'+$exe))
@@ -42,4 +42,5 @@ if ($Test) {
     if ($process.ExitCode -ne 0) { throw 'Las pruebas han fallado. Consulta dist\error_pruebas.txt.' }
     Write-Host 'Pruebas correctas. No se ha enviado ninguna impresion ni realizado un barrido de red.'
 }
+if ($CertificateThumbprint) { & (Join-Path $root 'sign.ps1') -FilePath $exe -CertificateThumbprint $CertificateThumbprint -SignToolPath $SignToolPath }
 Write-Host "Aplicacion compilada: $exe"

@@ -1,6 +1,8 @@
 # Impresorapp
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. Versión 0.16.
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. Versión 0.19.
+
+Autor: **Alberto Marín (albertuxo85)**.
 
 Cinta con texto, imágenes, QR, Code 39, fuentes y alineación; guías al mover elementos; formatos de etiquetas y A5/A4/A3; favoritos y búsqueda de impresoras LAN/USB. Impresión directa LAN mediante ZPL y Bluetooth experimental para DYMO LetraTag 200B. El papel utiliza impresoras instaladas y sus controladores.
 
@@ -9,6 +11,25 @@ Cinta con texto, imágenes, QR, Code 39, fuentes y alineación; guías al mover 
 Guardar y Guardar como muestran el diálogo para elegir nombre y ubicación. Se abre inicialmente **Documentos\Diseños Etiquetas** y se crea esa carpeta automáticamente. Se respeta la carpeta Documentos que indica Windows, incluida su redirección a OneDrive. Puedes elegir cualquier otra ubicación. Cancelar conserva los cambios pendientes; al cerrar, abrir otro diseño o actualizar, se ofrece guardar lo que no esté guardado.
 
 Los archivos `.etiqueta` incluyen el contenido del diseño y las imágenes. No incluyen preferencias de impresoras. Los diseños anteriores siguen siendo compatibles.
+
+## Instalar y distribuir
+
+El archivo para los usuarios es **Impresorapp-0.19-Setup.exe**. Súbelo a los assets de una **GitHub Release**, no a la carpeta del código fuente. Instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir administrador. Incluye menú Inicio, acceso opcional en el escritorio y desinstalación desde Windows. Detecta si falta .NET Framework 4.8. Mantiene diseños y preferencias al desinstalar.
+
+El programa y el instalador identifican como autor a Alberto Marín (albertuxo85), pero esta distribución **no tiene firma digital Authenticode** porque no se dispone de certificado. Windows puede mostrar editor desconocido o una advertencia de SmartScreen. No se ha creado un certificado autofirmado ni simulado una firma verificada.
+
+Para generar el instalador localmente:
+
+```powershell
+$compiler = .\tools\Get-InnoCompiler.ps1
+.\build-installer.ps1 -CompilerPath $compiler
+```
+
+El script prepara Inno Setup 7.1.1 desde su publicación oficial, comprueba SHA-256 y firma del compilador y lo extrae en modo portable. El compilador no se incluye en el código ni en el instalador de la aplicación. Alternativamente, proporciona la ruta de un ISCC.exe de Inno Setup que ya tengas instalado.
+
+La salida incluye `Impresorapp-0.19-Setup.exe`, su `.sha256`, el ZIP portable y su `.zip.sha256`. Conserva también estos dos últimos en Releases: las versiones existentes de Impresorapp los necesitan para actualizarse automáticamente.
+
+Si en el futuro dispones de un certificado de firma de código en el almacén personal de Windows y del SDK con signtool, puedes usar `-CertificateThumbprint` y opcionalmente `-SignToolPath` en build-installer.ps1. Se firman el ejecutable de la aplicación y el instalador, con sello de tiempo. No se guardan certificados ni claves en el repositorio. El desinstalador generado no se firma con esta opción.
 
 ## Compilar y crear el paquete
 
@@ -19,7 +40,7 @@ Se necesita Windows de 64 bits con .NET Framework 4.8 y sus referencias WinRT. Q
 .\package.ps1
 ```
 
-Abre `dist/Impresorapp-0.16.exe`. `package.ps1` vuelve a compilar y comprobar; genera `release/Impresorapp-0.16.zip` y su archivo `.zip.sha256`. Distribuye ambos como assets de la versión; no uses el ZIP automático de código fuente como actualización.
+Abre `dist/Impresorapp-0.19.exe`. `package.ps1` vuelve a compilar y comprobar; genera `release/Impresorapp-0.19.zip` y su archivo `.zip.sha256`. Distribuye ambos como assets de la versión; no uses el ZIP automático de código fuente como actualización.
 
 ## Actualizaciones desde GitHub
 
@@ -34,12 +55,12 @@ No se incluyen contraseñas ni tokens. Esta implementación consulta repositorio
 ## Publicar una versión
 
 1. Sube **el contenido de esta carpeta** a la raíz del repositorio, incluidos `.github/workflows`, `lib` y `VERSION`.
-2. Para la versión siguiente, cambia `VERSION` (por ejemplo, `0.17`) y añade los cambios de código. El número del ejecutable, metadatos y actualizador se generan desde ese archivo.
-3. Sube el commit y una etiqueta que coincida, por ejemplo `v0.17`.
-4. El workflow Windows compila, ejecuta las pruebas, crea un borrador con el ZIP y SHA-256 y después lo publica como última versión. GitHub Actions debe estar habilitado y permitir escritura de contenido para este workflow.
+2. Para la versión siguiente, cambia `VERSION` (por ejemplo, `0.18`) y añade los cambios de código. El número del ejecutable, metadatos y actualizador se generan desde ese archivo.
+3. Sube el commit y una etiqueta que coincida, por ejemplo `v0.18`.
+4. El workflow Windows prepara el compilador oficial, compila, ejecuta las pruebas, crea el instalador y un borrador con EXE, ZIP y ambos SHA-256, y después lo publica como última versión. GitHub Actions debe estar habilitado y permitir escritura de contenido para este workflow.
 5. Revisa el resultado en Actions y Releases. No reutilices una etiqueta ya publicada. Si el workflow falla después de crear el borrador, revisa el borrador y los archivos antes de publicarlo manualmente.
 
-Los workflows se han preparado y se ha probado el empaquetado local. La ejecución real de Actions y la descarga desde una Release quedan pendientes hasta subir el proyecto y publicar la primera versión.
+Los workflows se han preparado y se ha probado el empaquetado local. El instalador se ha probado desplegando los archivos en una carpeta aislada (modo de prueba sin registro ni accesos) y ejecutando las pruebas internas del programa desplegado. La integración de accesos/desinstalación en Windows y la ejecución real de Actions y la descarga desde una Release quedan pendientes hasta subir el proyecto y publicar la primera versión.
 
 ## Impresión y límites
 

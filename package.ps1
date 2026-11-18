@@ -1,9 +1,9 @@
-﻿param([string]$OutputDirectory)
+﻿param([string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $versionText = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 if ($versionText -notmatch '^\d+\.\d+(\.\d+){0,2}$') { throw 'VERSION no válida.' }
-& (Join-Path $root 'build.ps1') -Test
+& (Join-Path $root 'build.ps1') -Test -CertificateThumbprint $CertificateThumbprint -SignToolPath $SignToolPath
 if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'No se ha podido compilar.' }
 $out = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'release' }
 New-Item -ItemType Directory -Path $out -Force | Out-Null
