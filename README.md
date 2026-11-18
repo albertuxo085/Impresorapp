@@ -6,7 +6,7 @@
 
 ## Español
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.19.**
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.20.**
 
 Autor: **Alberto Marín (albertuxo85)**.
 
@@ -18,7 +18,7 @@ Diseña etiquetas con texto, imágenes, códigos QR, Code 39, emojis, marcos y l
 
 ### Instalar
 
-1. Descarga **`Impresorapp-0.19-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Descarga **`Impresorapp-0.20-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Ejecútalo. Se instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir permisos de administrador, con acceso en el menú Inicio y, si quieres, en el escritorio.
 3. Necesita .NET Framework 4.8 (incluido en Windows 10/11 actualizados; el instalador avisa si falta).
 
@@ -30,7 +30,7 @@ El programa y el instalador están **firmados digitalmente por Azor Ambiental Ho
 
 ### Actualizar
 
-En el menú **Actualizaciones** puedes buscar versiones nuevas o activar «Buscar nuevas versiones automáticamente al abrir» (desactivado por defecto). La aplicación consulta la última Release de este repositorio, comprueba el SHA-256 del paquete y, antes de abrir la versión nueva, ofrece guardar los cambios. No necesita permisos de administrador y no modifica controladores ni firmware.
+En **Ayuda → Buscar actualizaciones** puedes buscar versiones nuevas o activar «Buscar nuevas versiones automáticamente al abrir» (desactivado por defecto). La aplicación consulta la última Release de este repositorio, comprueba el SHA-256 del paquete y, antes de abrir la versión nueva, ofrece guardar los cambios. No necesita permisos de administrador y no modifica controladores ni firmware.
 
 La versión nueva se guarda en `%LOCALAPPDATA%\EtiquetaLocal\versions`. Se conservan los favoritos y rangos de búsqueda de versiones anteriores, y el acceso directo original abre siempre la versión más reciente.
 
@@ -77,7 +77,7 @@ Aún no se ha elegido una licencia para el código propio del proyecto. La bibli
 
 ## English
 
-Label and sign editor for 64-bit Windows 10/11. **Version 0.19.**
+Label and sign editor for 64-bit Windows 10/11. **Version 0.20.**
 
 Author: **Alberto Marín (albertuxo85)**.
 
@@ -89,7 +89,7 @@ Design labels with text, images, QR codes, Code 39, emojis, frames and lines, wi
 
 ### Install
 
-1. Download **`Impresorapp-0.19-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Download **`Impresorapp-0.20-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Run it. It installs for the current user in `%LOCALAPPDATA%\Programs\Impresorapp`, without administrator rights, with a Start menu shortcut and an optional desktop shortcut.
 3. Requires .NET Framework 4.8 (included in up-to-date Windows 10/11; the installer warns if it is missing).
 
@@ -101,7 +101,7 @@ The application and the installer are **digitally signed by Azor Ambiental Holdc
 
 ### Updates
 
-In the **Actualizaciones** (Updates) menu you can check for new versions or enable automatic checks on start-up (off by default). The app reads the latest Release of this repository, verifies the package SHA-256 and offers to save your changes before opening the new version. No administrator rights are needed and no drivers or firmware are changed.
+In **Ayuda → Buscar actualizaciones** (Help → Check for updates) you can check for new versions or enable automatic checks on start-up (off by default). The app reads the latest Release of this repository, verifies the package SHA-256 and offers to save your changes before opening the new version. No administrator rights are needed and no drivers or firmware are changed.
 
 New versions are stored in `%LOCALAPPDATA%\EtiquetaLocal\versions`. Favourites and search ranges from earlier versions are kept, and the original shortcut always opens the latest version.
 
