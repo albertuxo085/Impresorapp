@@ -12,6 +12,8 @@ namespace EtiquetaLocal {
   [DataMember] public int Port=9100,Profile=0,Dots=8;
   [DataMember] public decimal MaxWidth=104;
   [DataMember] public bool Configured;
+  // true si la impresora NO tiene la emulación Zebra (ZPL): entonces se imprime con su controlador de Windows.
+  [DataMember] public bool NoZpl;
   public override string ToString(){return Alias+" · "+Connection+(Connection=="USB"?" (impresión pendiente)":"");}
  }
  [DataContract] public class PrinterBook {
@@ -29,14 +31,26 @@ namespace EtiquetaLocal {
   public static SavedPrinter Put(PrinterBook book,SavedPrinter candidate,bool select){Validate(candidate);var old=book.Printers.FirstOrDefault(p=>p.Connection==candidate.Connection&&p.Port==candidate.Port&&String.Equals(p.Address,candidate.Address,StringComparison.OrdinalIgnoreCase));if(old!=null){candidate.Id=old.Id;book.Printers.Remove(old);}book.Printers.Add(candidate);if(String.IsNullOrEmpty(book.DefaultId))book.DefaultId=candidate.Id;if(select)book.SelectedId=candidate.Id;return candidate;}
   public static SavedPrinter FromNetwork(Found f){bool toshiba=f.Name.IndexOf("B-FV4",StringComparison.OrdinalIgnoreCase)>=0;return new SavedPrinter{Alias=String.IsNullOrWhiteSpace(f.DeviceName)?f.Name:f.DeviceName,Model=f.Name,Location=f.Location??"",Address=f.Address,Port=f.Ports.Contains(9100)?9100:f.Ports.Contains(8000)?8000:9100,Profile=toshiba?1:0,MaxWidth=toshiba?101.6m:104m};}
   public static SavedPrinter AddNetwork(Found f){if(f==null||f.Kind=="Compartida"||!f.Verified||!f.Ports.Any(p=>p==9100||p==8000))throw new Exception("Para impresión directa selecciona una impresora identificada con puerto RAW. Las impresoras de oficina se eligen en Imprimir en papel.");var book=Load();var old=book.Printers.FirstOrDefault(p=>p.Connection=="LAN"&&p.Address==f.Address);var result=Put(book,old??FromNetwork(f),true);Save(book);return result;}
-  public static bool EditName(IWin32Window owner,SavedPrinter printer){using(var d=new Form{Text="Guardar impresora",ClientSize=new Size(460,210),StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false,Font=new Font("Segoe UI",9),Icon=Branding.AppIcon}){
-   var name=new TextBox{Text=printer.Alias,Left=18,Top=42,Width=420,MaxLength=120};var location=new TextBox{Text=printer.Location,Left=18,Top=105,Width=420,MaxLength=160};
-   d.Controls.Add(new System.Windows.Forms.Label{Text="Nombre fácil de reconocer (por ejemplo, Toshiba almacén)",Left=18,Top=16,Width=420});d.Controls.Add(name);d.Controls.Add(new System.Windows.Forms.Label{Text="Ubicación en este programa (no modifica la impresora)",Left=18,Top=79,Width=420});d.Controls.Add(location);
-   var ok=new Button{Text="Guardar",Left=240,Top=160,Width=95};var cancel=new Button{Text="Cancelar",Left=345,Top=160,Width=95,DialogResult=DialogResult.Cancel};ok.Click+=(s,e)=>{if(String.IsNullOrWhiteSpace(name.Text)){MessageBox.Show(d,"Escribe un nombre para identificarla.");return;}d.DialogResult=DialogResult.OK;};d.Controls.Add(ok);d.Controls.Add(cancel);d.AcceptButton=ok;d.CancelButton=cancel;if(d.ShowDialog(owner)!=DialogResult.OK)return false;printer.Alias=name.Text.Trim();printer.Location=location.Text.Trim();return true;
+  public static readonly string[] Languages={"ZPL · Zebra o compatible (incluye Toshiba con emulación Zebra)","Toshiba B-FV4D-GS · emulación Zebra (ZPL)"};
+  // Ajustes de una impresora: nombre, ubicación, lenguaje y emulación Zebra (ZPL).
+  public static bool EditName(IWin32Window owner,SavedPrinter printer){using(var d=new Form{Text="Ajustes de la impresora",ClientSize=new Size(560,440),StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false,Font=new Font("Segoe UI",9.5f),Icon=Branding.AppIcon}){
+   var name=new TextBox{Text=printer.Alias,Left=18,Top=40,Width=520,MaxLength=120,AccessibleName="Nombre de la impresora"};var location=new TextBox{Text=printer.Location,Left=18,Top=100,Width=520,MaxLength=160,AccessibleName="Ubicación"};
+   d.Controls.Add(new System.Windows.Forms.Label{Text="Nombre fácil de reconocer (por ejemplo, Toshiba almacén)",Left=18,Top=16,Width=520});d.Controls.Add(name);d.Controls.Add(new System.Windows.Forms.Label{Text="Ubicación en este programa (no modifica la impresora)",Left=18,Top=76,Width=520});d.Controls.Add(location);
+   d.Controls.Add(new System.Windows.Forms.Label{Text="Lenguaje de impresión",Left=18,Top=140,Width=520});
+   var language=new ComboBox{Left=18,Top=164,Width=520,DropDownStyle=ComboBoxStyle.DropDownList,AccessibleName="Lenguaje de impresión"};language.Items.AddRange(Languages);language.SelectedIndex=Math.Max(0,Math.Min(1,printer.Profile));d.Controls.Add(language);
+   var zpl=new CheckBox{Text="La impresora tiene activada la emulación Zebra (ZPL)",Left=18,Top=204,Width=520,Checked=!printer.NoZpl};d.Controls.Add(zpl);
+   var help=new Panel{Left=18,Top=234,Width=520,Height=140,BackColor=Color.FromArgb(255,246,230)};d.Controls.Add(help);
+   help.Controls.Add(new System.Windows.Forms.Label{Text="Sin emulación Zebra no se puede enviar la etiqueta directamente: instala el controlador y se imprimirá a través de Windows (Archivo › Imprimir en papel). Muchas Toshiba pueden activar la emulación Zebra desde su menú o su página web.",Left=12,Top=10,Width=496,Height=80,ForeColor=Color.FromArgb(107,68,0)});
+   var update=new Button{Text="Buscar controlador en Windows Update",Left=12,Top=94,Width=250,Height=34};update.Click+=(s,e)=>DriverHelp.OpenWindowsUpdate(d);help.Controls.Add(update);
+   var web=new Button{Text="Buscar controlador en Internet",Left=270,Top=94,Width=238,Height=34};web.Click+=(s,e)=>DriverHelp.SearchOnline(d,String.IsNullOrWhiteSpace(printer.Model)?name.Text:printer.Model);help.Controls.Add(web);
+   help.Visible=!zpl.Checked;zpl.CheckedChanged+=(s,e)=>help.Visible=!zpl.Checked;
+   var ok=new Button{Text="Guardar",Left=340,Top=392,Width=95,Height=32};var cancel=new Button{Text="Cancelar",Left=443,Top=392,Width=95,Height=32,DialogResult=DialogResult.Cancel};ok.Click+=(s,e)=>{if(String.IsNullOrWhiteSpace(name.Text)){MessageBox.Show(d,"Escribe un nombre para identificarla.");return;}d.DialogResult=DialogResult.OK;};d.Controls.Add(ok);d.Controls.Add(cancel);d.AcceptButton=ok;d.CancelButton=cancel;if(d.ShowDialog(owner)!=DialogResult.OK)return false;
+   printer.Alias=name.Text.Trim();printer.Location=location.Text.Trim();printer.NoZpl=!zpl.Checked;if(printer.Profile!=language.SelectedIndex){printer.Profile=language.SelectedIndex;printer.MaxWidth=printer.Profile==1?101.6m:104m;if(printer.Profile==1)printer.Dots=8;printer.Configured=false;}return true;
   }}
   public static void SelfTest(){string path=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"printers-test-"+Guid.NewGuid().ToString("N")+".json");try{
    var book=new PrinterBook();var a=Put(book,new SavedPrinter{Alias="Almacén",Address="192.0.2.8",Configured=true,Profile=1,MaxWidth=101.6m},true);Save(book,path);book=Load(path);if(book.Preferred==null||book.Preferred.Alias!="Almacén"||!book.Preferred.Configured)throw new Exception("No se recupera la impresora guardada");
    var b=Put(book,new SavedPrinter{Alias="Nueva ficha",Address="192.0.2.8"},true);if(book.Printers.Count!=1||b.Id!=a.Id||book.DefaultId!=a.Id)throw new Exception("Duplicación de impresora");Put(book,new SavedPrinter{Alias="USB almacén",Address="USBPRINT\\PRINTER\\TEST",Connection="USB"},false);Save(book,path);if(Load(path).Printers.Count!=2)throw new Exception("Persistencia LAN y USB");
+   Put(book,new SavedPrinter{Alias="TEC sin ZPL",Model="TEC B-SA4T",Address="192.0.2.9",NoZpl=true},false);Save(book,path);var reloaded=Load(path).Printers.FirstOrDefault(p=>p.Address=="192.0.2.9");if(reloaded==null||!reloaded.NoZpl)throw new Exception("No se guarda la falta de emulación Zebra");if(!DriverHelp.SearchUrl("TEC B-SA4T").Contains("TEC%20B-SA4T%20driver"))throw new Exception("Búsqueda de controlador");
   }finally{if(File.Exists(path))File.Delete(path);}}
  }
  public class SavedPrinterPanel:UserControl {
@@ -57,7 +71,7 @@ namespace EtiquetaLocal {
    dymoMain.Click+=(s,e)=>{if(DymoStore.Load()!=null){if(DymoUse!=null)DymoUse();}else if(DymoConnect!=null)DymoConnect();};dymoOther.Click+=(s,e)=>{if(DymoConnect!=null)DymoConnect();};
    // Acciones sobre la impresora elegida.
    var bottom=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=58,Padding=new Padding(14,10,14,8),FlowDirection=FlowDirection.RightToLeft,BackColor=Color.White};
-   var use=Ui.Action("print","Usar ahora",Use,140,true);bottom.Controls.Add(use);bottom.Controls.Add(Ui.Action("delete","Quitar de la lista",Remove,170));bottom.Controls.Add(Ui.Action("save","Hacer predeterminada",Default,190));bottom.Controls.Add(Ui.Action("edit","Cambiar nombre o ubicación",Edit,225));
+   var use=Ui.Action("print","Usar ahora",Use,140,true);bottom.Controls.Add(use);bottom.Controls.Add(Ui.Action("delete","Quitar de la lista",Remove,170));bottom.Controls.Add(Ui.Action("save","Hacer predeterminada",Default,190));bottom.Controls.Add(Ui.Action("edit","Ajustes de la impresora",Edit,215));
    status.Dock=DockStyle.Bottom;status.Height=40;status.Padding=new Padding(14,4,14,4);status.ForeColor=Theme.Muted;
    Controls.Add(listHost);Controls.Add(top);Controls.Add(dymo);Controls.Add(status);Controls.Add(bottom);VisibleChanged+=(s,e)=>{if(Visible)RefreshList();};RefreshList();
   }

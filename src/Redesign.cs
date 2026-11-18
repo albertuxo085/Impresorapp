@@ -170,12 +170,28 @@ namespace EtiquetaLocal {
   }
  }
 
+ // Ayuda para instalar el controlador de una impresora sin emulación Zebra.
+ public static class DriverHelp {
+  public static void OpenWindowsUpdate(IWin32Window owner){try{System.Diagnostics.Process.Start("ms-settings:windowsupdate-optionalupdates");}catch{try{System.Diagnostics.Process.Start("ms-settings:windowsupdate");}catch(Exception ex){MessageBox.Show(owner,"No se pudo abrir Windows Update: "+ex.Message,"Controlador");}}}
+  public static string SearchUrl(string model){string m=String.IsNullOrWhiteSpace(model)?"impresora de etiquetas":model.Trim();return "https://www.bing.com/search?q="+Uri.EscapeDataString(m+" driver Windows");}
+  public static void SearchOnline(IWin32Window owner,string model){try{System.Diagnostics.Process.Start(SearchUrl(model));}catch(Exception ex){MessageBox.Show(owner,"No se pudo abrir el navegador: "+ex.Message,"Controlador");}}
+  // Para una impresora sin emulación Zebra: imprimir con su controlador de Windows o buscarlo.
+  public static void Offer(IWin32Window owner,SavedPrinter p,Action printWithWindows){using(var d=new Form{Text="Impresora sin emulación Zebra",ClientSize=new Size(520,256),StartPosition=FormStartPosition.CenterParent,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false,Font=new Font("Segoe UI",9.5f),Icon=Branding.AppIcon}){
+   d.Controls.Add(new System.Windows.Forms.Label{Text=p.Alias+" no tiene activada la emulación Zebra (ZPL), así que la etiqueta no se puede enviar directamente.\n\nSi ya tienes su controlador instalado en Windows, imprime a través de él. Si no, búscalo e instálalo primero.",Left=18,Top=16,Width=484,Height=100});
+   var windows=new Button{Text="Imprimir con el controlador de Windows",Left=18,Top=128,Width=484,Height=36};windows.Click+=(s,e)=>{d.DialogResult=DialogResult.OK;};d.Controls.Add(windows);
+   var update=new Button{Text="Buscar en Windows Update",Left=18,Top=172,Width=238,Height=34};update.Click+=(s,e)=>OpenWindowsUpdate(d);d.Controls.Add(update);
+   var web=new Button{Text="Buscar controlador en Internet",Left=264,Top=172,Width=238,Height=34};web.Click+=(s,e)=>SearchOnline(d,String.IsNullOrWhiteSpace(p.Model)?p.Alias:p.Model);d.Controls.Add(web);
+   var close=new Button{Text="Cerrar",Left=412,Top=216,Width=90,Height=30,DialogResult=DialogResult.Cancel};d.Controls.Add(close);d.CancelButton=close;
+   if(d.ShowDialog(owner)==DialogResult.OK&&printWithWindows!=null)printWithWindows();
+  }}
+ }
+
  // Lista de impresoras guardadas en forma de tarjetas.
  public class PrinterCardList:ListBox {
   public string DefaultId="",InUseId="";
   public PrinterCardList(){DrawMode=DrawMode.OwnerDrawFixed;ItemHeight=68;IntegralHeight=false;BorderStyle=BorderStyle.None;BackColor=Color.FromArgb(247,250,248);Font=new Font("Segoe UI",9.5f);}
-  public static string Status(SavedPrinter p){return p.Connection=="USB"?"Impresión USB pendiente":p.Configured?"Configurada":"Se ajustará en la primera impresión";}
-  public static string Describe(SavedPrinter p){return (String.IsNullOrWhiteSpace(p.Location)?"":p.Location+" · ")+(p.Connection=="USB"?"por USB":"por red")+" · "+p.Address;}
+  public static string Status(SavedPrinter p){return p.Connection=="USB"?"Impresión USB pendiente":p.NoZpl?"Sin emulación Zebra · usa su controlador":p.Configured?"Configurada":"Se ajustará en la primera impresión";}
+  public static string Describe(SavedPrinter p){return (String.IsNullOrWhiteSpace(p.Location)?"":p.Location+" · ")+(p.Connection=="USB"?"por USB":"por red")+" · "+p.Address+" · "+(p.NoZpl?"sin emulación Zebra":p.Profile==1?"Toshiba con emulación Zebra (ZPL)":"ZPL (Zebra)");}
   protected override void OnDrawItem(DrawItemEventArgs e){
    if(e.Index<0||e.Index>=Items.Count)return;var p=Items[e.Index] as SavedPrinter;if(p==null)return;var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
    using(var bg=new SolidBrush(BackColor))g.FillRectangle(bg,e.Bounds);
@@ -186,7 +202,7 @@ namespace EtiquetaLocal {
    if(p.Id==InUseId)x=Badge(g,"En uso",x,card.Y+12,Theme.Brand,Color.White);
    if(p.Id==DefaultId)x=Badge(g,"★ Predeterminada",x,card.Y+12,Color.FromArgb(255,241,214),Color.FromArgb(107,68,0));
    TextRenderer.DrawText(g,Describe(p),Font,new Rectangle(iconBox.Right+14,card.Y+36,card.Width-iconBox.Width-270,20),Theme.Muted,TextFormatFlags.Left|TextFormatFlags.EndEllipsis);
-   string status=Status(p);var statusSize=TextRenderer.MeasureText(status,Font);TextRenderer.DrawText(g,status,Font,new Point(card.Right-statusSize.Width-16,card.Y+(card.Height-statusSize.Height)/2),p.Configured&&p.Connection!="USB"?Theme.BrandDark:Theme.Warn);
+   string status=Status(p);var statusSize=TextRenderer.MeasureText(status,Font);TextRenderer.DrawText(g,status,Font,new Point(card.Right-statusSize.Width-16,card.Y+(card.Height-statusSize.Height)/2),p.Configured&&!p.NoZpl&&p.Connection!="USB"?Theme.BrandDark:Theme.Warn);
    if((e.State&DrawItemState.Focus)!=0)ControlPaint.DrawFocusRectangle(g,Rectangle.Inflate(card,-3,-3));
   }
   int Badge(Graphics g,string text,int x,int y,Color back,Color fore){using(var f=new Font("Segoe UI",8.5f,FontStyle.Bold)){var size=TextRenderer.MeasureText(text,f);var r=new Rectangle(x,y,size.Width+8,20);using(var b=new SolidBrush(back))using(var path=StepsBar.Round(r,10))g.FillPath(b,path);TextRenderer.DrawText(g,text,f,r,fore,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);return r.Right+6;}}
