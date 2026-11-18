@@ -35,11 +35,14 @@ namespace EtiquetaLocal {
   public string SelectedName {get{return HasSelection?devices.SelectedItem.ToString():"Sin seleccionar · Busca tu LetraTag";}}
   public bool HasSelection {get{return devices.SelectedItem is LTDevice;}}
   public Task PrintCurrent(){return Print();}
+  public LTDevice SelectedDevice {get{return devices.SelectedItem as LTDevice;}}
+  // Selecciona una DYMO guardada o recién conectada sin tener que buscarla otra vez.
+  public void UseDevice(LTDevice device){if(device==null)return;var existing=devices.Items.Cast<object>().OfType<LTDevice>().FirstOrDefault(d=>d.Address==device.Address);if(existing==null){existing=device;devices.Items.Add(device);if(!found.Any(d=>d.Address==device.Address))found.Add(device);}devices.SelectedItem=existing;}
   public LetraTagPanel(Func<Bitmap> buildDesign){getDesign=buildDesign;Dock=DockStyle.Bottom;Height=225;BackColor=Color.FromArgb(238,245,250);Font=new Font("Segoe UI",9);
    var top=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(6),WrapContents=true};
    var caption=new System.Windows.Forms.Label{Text="DYMO LetraTag 200B · Se imprime el diseño actual del lienzo de arriba.",AutoSize=true};top.Controls.Add(caption);top.SetFlowBreak(caption,true);
    search.Text="Buscar DYMO (12 s)";search.AutoSize=true;search.Click+=async(s,e)=>await Search();top.Controls.Add(search);
-   devices.SelectedIndexChanged+=(s,e)=>{if(SelectionChanged!=null)SelectionChanged();};devices.Width=220;devices.DropDownStyle=ComboBoxStyle.DropDownList;top.Controls.Add(devices);
+   devices.SelectedIndexChanged+=(s,e)=>{var d=devices.SelectedItem as LTDevice;if(d!=null){try{DymoStore.Save(d);}catch{}}if(SelectionChanged!=null)SelectionChanged();};devices.AccessibleName="DYMO seleccionada";devices.Width=220;devices.DropDownStyle=ComboBoxStyle.DropDownList;top.Controls.Add(devices);
    print.Text="Imprimir diseño actual";print.AutoSize=true;print.Click+=async(s,e)=>await Print();top.Controls.Add(print);
    stop.Text="Detener";stop.AutoSize=true;stop.Enabled=false;stop.Click+=(s,e)=>{if(cts!=null)cts.Cancel();if(watcher!=null)watcher.Stop();};top.Controls.Add(stop);
    var save=new Button{Text="Guardar diagnóstico…",AutoSize=true};save.Click+=(s,e)=>{using(var d=new SaveFileDialog{Filter="Diagnóstico|*.txt",FileName="diagnostico_letratag.txt"})if(d.ShowDialog()==DialogResult.OK)File.WriteAllText(d.FileName,log.Text,Encoding.UTF8);};top.Controls.Add(save);

@@ -40,14 +40,34 @@ namespace EtiquetaLocal {
   }finally{if(File.Exists(path))File.Delete(path);}}
  }
  public class SavedPrinterPanel:UserControl {
-  readonly ListView list=new ListView();readonly System.Windows.Forms.Label status=new System.Windows.Forms.Label();public event Action<SavedPrinter> SelectedPrinter;
-  public SavedPrinterPanel(){Dock=DockStyle.Fill;BackColor=Color.White;var top=new FlowLayoutPanel{Dock=DockStyle.Top,Height=92,Padding=new Padding(12)};var hint=new System.Windows.Forms.Label{Text="Tus impresoras habituales. Doble clic para seleccionar; no se realiza una búsqueda de red.",Width=870,Height=25};top.Controls.Add(hint);top.SetFlowBreak(hint,true);
-   top.Controls.Add(Ui.Action("print","Usar seleccionada",Use,170));top.Controls.Add(Ui.Action("save","Predeterminada",Default,155));top.Controls.Add(Ui.Action("edit","Nombre y ubicación",Edit,180));top.Controls.Add(Ui.Action("delete","Quitar de la lista",Remove,165));top.Controls.Add(Ui.Action("file","Añadir por IP",Manual,145));
-   list.Dock=DockStyle.Fill;list.View=View.Details;list.FullRowSelect=true;list.Columns.Add("Nombre",230);list.Columns.Add("Conexión",75);list.Columns.Add("Dirección / dispositivo",200);list.Columns.Add("Ubicación local",180);list.Columns.Add("Estado guardado",270);list.DoubleClick+=(s,e)=>Use();
-   status.Dock=DockStyle.Bottom;status.Height=42;status.Padding=new Padding(10);Controls.Add(list);Controls.Add(top);Controls.Add(status);VisibleChanged+=(s,e)=>{if(Visible)RefreshList();};RefreshList();
+  readonly PrinterCardList list=new PrinterCardList();readonly System.Windows.Forms.Label status=new System.Windows.Forms.Label();public event Action<SavedPrinter> SelectedPrinter;public event Action DymoConnect,DymoUse;
+  readonly System.Windows.Forms.Label dymoTitle=new System.Windows.Forms.Label(),dymoText=new System.Windows.Forms.Label();readonly Button dymoMain=new Button(),dymoOther=new Button();
+  public SavedPrinterPanel(){Dock=DockStyle.Fill;BackColor=Color.FromArgb(247,250,248);Font=new Font("Segoe UI",9.5f);
+   var top=new Panel{Dock=DockStyle.Top,Height=58,Padding=new Padding(14,12,14,8)};var hint=new System.Windows.Forms.Label{Text="Las impresoras que usas habitualmente. Elige una y pulsa Usar ahora (o haz doble clic).",Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,ForeColor=Theme.Muted};var add=Ui.Action("file","Añadir por IP",Manual,150);add.Dock=DockStyle.Right;top.Controls.Add(hint);top.Controls.Add(add);
+   list.Dock=DockStyle.Fill;list.DoubleClick+=(s,e)=>Use();list.AccessibleName="Mis impresoras";list.KeyDown+=(s,e)=>{if(e.KeyCode==Keys.Enter){Use();e.Handled=true;}};
+   var listHost=new Panel{Dock=DockStyle.Fill,Padding=new Padding(10,0,10,0)};listHost.Controls.Add(list);
+   // Tarjeta de la DYMO LetraTag (por Bluetooth).
+   var dymo=new Panel{Dock=DockStyle.Bottom,Height=84,Padding=new Padding(14,8,14,8)};var dymoCard=new Panel{Dock=DockStyle.Fill,BackColor=Color.White};dymo.Controls.Add(dymoCard);
+   dymoCard.Paint+=(s,e)=>{using(var pen=new Pen(Color.FromArgb(156,195,172),1.5f)){pen.DashStyle=System.Drawing.Drawing2D.DashStyle.Dash;e.Graphics.DrawRectangle(pen,1,1,dymoCard.Width-3,dymoCard.Height-3);}using(var im=Ui.Icon("bluetooth",Theme.Brand))e.Graphics.DrawImage(im,18,(dymoCard.Height-20)/2);};
+   dymoTitle.Location=new Point(52,10);dymoTitle.AutoSize=true;dymoTitle.Font=new Font("Segoe UI",10.5f,FontStyle.Bold);dymoTitle.ForeColor=Theme.Ink;dymoCard.Controls.Add(dymoTitle);
+   dymoText.Location=new Point(52,34);dymoText.AutoSize=true;dymoText.ForeColor=Theme.Muted;dymoCard.Controls.Add(dymoText);
+   dymoMain.Size=new Size(170,34);dymoMain.Anchor=AnchorStyles.Right;dymoMain.FlatStyle=FlatStyle.Flat;dymoMain.FlatAppearance.BorderColor=Theme.Brand;dymoMain.ForeColor=Theme.BrandDark;dymoMain.BackColor=Color.White;dymoMain.Font=new Font("Segoe UI",9.5f,FontStyle.Bold);dymoMain.Image=Ui.Icon("bluetooth",Theme.Brand);dymoMain.TextImageRelation=TextImageRelation.ImageBeforeText;dymoCard.Controls.Add(dymoMain);
+   dymoOther.Size=new Size(130,34);dymoOther.Anchor=AnchorStyles.Right;dymoOther.Text="Conectar otra";dymoOther.FlatStyle=FlatStyle.Flat;dymoOther.FlatAppearance.BorderColor=Color.FromArgb(185,204,191);dymoOther.BackColor=Color.White;dymoCard.Controls.Add(dymoOther);
+   dymoCard.Resize+=(s,e)=>{dymoMain.Location=new Point(dymoCard.Width-dymoMain.Width-16,(dymoCard.Height-dymoMain.Height)/2);dymoOther.Location=new Point(dymoMain.Left-dymoOther.Width-8,dymoMain.Top);};
+   dymoMain.Click+=(s,e)=>{if(DymoStore.Load()!=null){if(DymoUse!=null)DymoUse();}else if(DymoConnect!=null)DymoConnect();};dymoOther.Click+=(s,e)=>{if(DymoConnect!=null)DymoConnect();};
+   // Acciones sobre la impresora elegida.
+   var bottom=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=58,Padding=new Padding(14,10,14,8),FlowDirection=FlowDirection.RightToLeft,BackColor=Color.White};
+   var use=Ui.Action("print","Usar ahora",Use,140,true);bottom.Controls.Add(use);bottom.Controls.Add(Ui.Action("delete","Quitar de la lista",Remove,170));bottom.Controls.Add(Ui.Action("save","Hacer predeterminada",Default,190));bottom.Controls.Add(Ui.Action("edit","Cambiar nombre o ubicación",Edit,225));
+   status.Dock=DockStyle.Bottom;status.Height=40;status.Padding=new Padding(14,4,14,4);status.ForeColor=Theme.Muted;
+   Controls.Add(listHost);Controls.Add(top);Controls.Add(dymo);Controls.Add(status);Controls.Add(bottom);VisibleChanged+=(s,e)=>{if(Visible)RefreshList();};RefreshList();
   }
-  SavedPrinter Selected {get{return list.SelectedItems.Count==0?null:list.SelectedItems[0].Tag as SavedPrinter;}}
-  public void RefreshList(){try{var b=SavedPrinters.Load();list.Items.Clear();foreach(var p in b.Printers){var row=new ListViewItem(new[]{(p.Id==b.DefaultId?"★ ":"")+p.Alias,p.Connection,p.Address,p.Location,p.Connection=="USB"?"Impresión USB pendiente":p.Configured?"Perfil de impresión guardado":"Revisar perfil en la primera impresión"}){Tag=p};list.Items.Add(row);}status.Text=b.Printers.Count==0?"Guarda una impresora desde Red o USB, o añádela por IP.":"Preferida: "+(b.Preferred==null?"ninguna":b.Preferred.Alias)+". La ubicación local solo se guarda en este equipo.";}catch(Exception ex){status.Text=ex.Message;}}
+  SavedPrinter Selected {get{return list.SelectedItem as SavedPrinter;}}
+  public void RefreshList(){try{var b=SavedPrinters.Load();var keep=Selected==null?null:Selected.Id;list.DefaultId=b.DefaultId??"";list.InUseId=b.Preferred==null?"":b.Preferred.Id;list.Items.Clear();foreach(var p in b.Printers)list.Items.Add(p);
+    var again=list.Items.Cast<SavedPrinter>().FirstOrDefault(p=>p.Id==(keep??list.InUseId));if(again!=null)list.SelectedItem=again;
+    status.Text=b.Printers.Count==0?"Todavía no hay impresoras guardadas. Búscalas en «Buscar en la red» o añádelas por IP.":"En uso: la que recibirá la próxima impresión.   ★ Predeterminada: la que se elige al abrir el programa.";}catch(Exception ex){status.Text=ex.Message;}
+   var dymo=DymoStore.Load();if(dymo==null){dymoTitle.Text="¿Usas una DYMO LetraTag?";dymoText.Text="Se conecta por Bluetooth. Al conectarla, el diseño cambia solo a cinta de 12 mm.";dymoMain.Text=" Conectar mi DYMO";dymoOther.Visible=false;}
+   else{dymoTitle.Text="DYMO LetraTag · "+dymo.Name;dymoText.Text="Por Bluetooth · Guardada en este equipo. Al usarla, el diseño pasa a cinta de 12 mm.";dymoMain.Text=" Usar la DYMO";dymoOther.Visible=true;}
+   dymoMain.AccessibleName=dymoMain.Text.Trim();}
   void Use(){try{var p=Selected;if(p==null)return;var b=SavedPrinters.Load();b.SelectedId=p.Id;SavedPrinters.Save(b);if(SelectedPrinter!=null)SelectedPrinter(p);}catch(Exception ex){MessageBox.Show(this,ex.Message);}}
   void Default(){try{var p=Selected;if(p==null)return;var b=SavedPrinters.Load();b.DefaultId=b.SelectedId=p.Id;SavedPrinters.Save(b);RefreshList();}catch(Exception ex){MessageBox.Show(this,ex.Message);}}
   void Edit(){try{var p=Selected;if(p==null||!SavedPrinters.EditName(this,p))return;var b=SavedPrinters.Load();SavedPrinters.Put(b,p,false);SavedPrinters.Save(b);RefreshList();}catch(Exception ex){MessageBox.Show(this,ex.Message);}}

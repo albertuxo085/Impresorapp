@@ -13,7 +13,7 @@ namespace EtiquetaLocal {
   static readonly ToolTip Tips=new ToolTip();
   public static Button Action(string icon,string text,Action action,int width=218,bool primary=false){
    var b=new Button{Text=" "+text,Image=Icon(icon,primary?Color.White:Color.FromArgb(42,85,65)),TextImageRelation=TextImageRelation.ImageBeforeText,ImageAlign=ContentAlignment.MiddleLeft,TextAlign=ContentAlignment.MiddleLeft,Width=width,Height=32,Margin=new Padding(0,2,5,2),Padding=new Padding(7,0,3,0),FlatStyle=FlatStyle.Flat,BackColor=primary?Color.FromArgb(37,108,76):Color.White,ForeColor=primary?Color.White:Color.FromArgb(33,55,43),Cursor=Cursors.Hand};
-   b.FlatAppearance.BorderColor=Color.FromArgb(202,220,209);b.Click+=(s,e)=>action();Tips.SetToolTip(b,text);return b;
+   b.FlatAppearance.BorderColor=Color.FromArgb(202,220,209);b.AccessibleRole=AccessibleRole.PushButton;b.AccessibleName=text;b.Click+=(s,e)=>action();Tips.SetToolTip(b,text);return b;
   }
   public static FlowLayoutPanel Section(FlowLayoutPanel parent,string title){
    var group=new GroupBox{Text=title,Width=232,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(6,14,6,6),Margin=new Padding(0,0,0,12),BackColor=Color.White};
