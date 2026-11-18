@@ -1,75 +1,145 @@
 # Impresorapp
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. Versión 0.19.
+**[Español](#español) · [English](#english)**
+
+---
+
+## Español
+
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.19.**
 
 Autor: **Alberto Marín (albertuxo85)**.
 
-Cinta con texto, imágenes, QR, Code 39, fuentes y alineación; guías al mover elementos; formatos de etiquetas y A5/A4/A3; favoritos y búsqueda de impresoras LAN/USB. Impresión directa LAN mediante ZPL y Bluetooth experimental para DYMO LetraTag 200B. El papel utiliza impresoras instaladas y sus controladores.
+Diseña etiquetas con texto, imágenes, códigos QR, Code 39, emojis, marcos y líneas, con guías al mover elementos. Incluye formatos de rollo, cinta DYMO de 12 mm y papel A5/A4/A3, favoritos y búsqueda de impresoras de red y USB.
 
-## Guardar diseños
+- **Impresoras de etiquetas por red** (Ethernet/Wi-Fi) mediante ZPL, por ejemplo Zebra ZT231 o Toshiba B-FV4D en modo Z.
+- **DYMO LetraTag 200B por Bluetooth** (experimental).
+- **Papel** con las impresoras instaladas en Windows y sus controladores.
 
-Guardar y Guardar como muestran el diálogo para elegir nombre y ubicación. Se abre inicialmente **Documentos\Diseños Etiquetas** y se crea esa carpeta automáticamente. Se respeta la carpeta Documentos que indica Windows, incluida su redirección a OneDrive. Puedes elegir cualquier otra ubicación. Cancelar conserva los cambios pendientes; al cerrar, abrir otro diseño o actualizar, se ofrece guardar lo que no esté guardado.
+### Instalar
 
-Los archivos `.etiqueta` incluyen el contenido del diseño y las imágenes. No incluyen preferencias de impresoras. Los diseños anteriores siguen siendo compatibles.
+1. Descarga **`Impresorapp-0.19-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+2. Ejecútalo. Se instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir permisos de administrador, con acceso en el menú Inicio y, si quieres, en el escritorio.
+3. Necesita .NET Framework 4.8 (incluido en Windows 10/11 actualizados; el instalador avisa si falta).
 
-## Instalar y distribuir
+Para desinstalar, usa *Configuración de Windows → Aplicaciones*. Tus diseños y preferencias se conservan.
 
-El archivo para los usuarios es **Impresorapp-0.19-Setup.exe**. Súbelo a los assets de una **GitHub Release**, no a la carpeta del código fuente. Instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir administrador. Incluye menú Inicio, acceso opcional en el escritorio y desinstalación desde Windows. Detecta si falta .NET Framework 4.8. Mantiene diseños y preferencias al desinstalar.
+### Firma digital
 
-El programa y el instalador identifican como autor a Alberto Marín (albertuxo85), pero esta distribución **no tiene firma digital Authenticode** porque no se dispone de certificado. Windows puede mostrar editor desconocido o una advertencia de SmartScreen. No se ha creado un certificado autofirmado ni simulado una firma verificada.
+El programa y el instalador están **firmados digitalmente por Azor Ambiental Holdco S.L.U.**, con sello de tiempo. Es un certificado interno de la empresa: en los equipos que tengan instalado el certificado de Azor, Windows muestra el editor verificado. En otros equipos puede aparecer un aviso de editor desconocido o de SmartScreen.
 
-Para generar el instalador localmente:
+### Actualizar
 
-```powershell
-$compiler = .\tools\Get-InnoCompiler.ps1
-.\build-installer.ps1 -CompilerPath $compiler
-```
+En el menú **Actualizaciones** puedes buscar versiones nuevas o activar «Buscar nuevas versiones automáticamente al abrir» (desactivado por defecto). La aplicación consulta la última Release de este repositorio, comprueba el SHA-256 del paquete y, antes de abrir la versión nueva, ofrece guardar los cambios. No necesita permisos de administrador y no modifica controladores ni firmware.
 
-El script prepara Inno Setup 7.1.1 desde su publicación oficial, comprueba SHA-256 y firma del compilador y lo extrae en modo portable. El compilador no se incluye en el código ni en el instalador de la aplicación. Alternativamente, proporciona la ruta de un ISCC.exe de Inno Setup que ya tengas instalado.
+La versión nueva se guarda en `%LOCALAPPDATA%\EtiquetaLocal\versions`. Se conservan los favoritos y rangos de búsqueda de versiones anteriores, y el acceso directo original abre siempre la versión más reciente.
 
-La salida incluye `Impresorapp-0.19-Setup.exe`, su `.sha256`, el ZIP portable y su `.zip.sha256`. Conserva también estos dos últimos en Releases: las versiones existentes de Impresorapp los necesitan para actualizarse automáticamente.
+### Guardar diseños
 
-Si en el futuro dispones de un certificado de firma de código en el almacén personal de Windows y del SDK con signtool, puedes usar `-CertificateThumbprint` y opcionalmente `-SignToolPath` en build-installer.ps1. Se firman el ejecutable de la aplicación y el instalador, con sello de tiempo. No se guardan certificados ni claves en el repositorio. El desinstalador generado no se firma con esta opción.
+*Guardar* y *Guardar como* abren por defecto **Documentos\Diseños Etiquetas** (se crea si no existe y respeta la redirección de Documentos a OneDrive). Puedes elegir cualquier otra carpeta. Al cerrar, abrir otro diseño o actualizar, se ofrece guardar lo pendiente.
 
-## Compilar y crear el paquete
+Los archivos `.etiqueta` incluyen el diseño y sus imágenes, pero no las preferencias de impresoras. Los diseños de versiones anteriores siguen siendo compatibles.
 
-Se necesita Windows de 64 bits con .NET Framework 4.8 y sus referencias WinRT. QRCoder está incluido en `lib` con su licencia; no se descargan dependencias al compilar.
+### Impresión y límites
+
+- **Toshiba B-FV4D:** necesita etiquetas térmicas directas, Z Mode (ZPL) y sensor calibrado. Ancho máximo 101,6 mm a 203 ppp. El rollo físico debe coincidir con las medidas del diseño.
+- **DYMO LetraTag:** cinta de 12 mm, largo de 25 a 200 mm, Bluetooth LE. El texto y los emojis nuevos usan el mismo tamaño, el mayor que cabe con un margen mínimo, y se centran en la cinta.
+- **Códigos QR:** se generan en el propio equipo, con texto o URL de hasta 1200 bytes UTF-8. Comprueba que se leen bien, sobre todo en cinta estrecha.
+- **USB:** detecta y guarda dispositivos, pero **la impresión directa por USB aún no está disponible**. No imprime a través de colas compartidas de Windows.
+- **Búsqueda en red:** usa SNMP de solo lectura con la comunidad `public`. No consulta la base de datos de Print Audit.
+
+### Para desarrolladores
+
+**Compilar y probar.** Requiere Windows de 64 bits con .NET Framework 4.8 y sus referencias WinRT. QRCoder va incluido en `lib` con su licencia; no se descarga nada al compilar.
 
 ```powershell
 .\build.ps1 -Test
-.\package.ps1
 ```
 
-Abre `dist/Impresorapp-0.19.exe`. `package.ps1` vuelve a compilar y comprobar; genera `release/Impresorapp-0.19.zip` y su archivo `.zip.sha256`. Distribuye ambos como assets de la versión; no uses el ZIP automático de código fuente como actualización.
+Las pruebas internas no hacen barridos de red ni envían impresiones.
 
-## Actualizaciones desde GitHub
+**Crear una versión firmada.** Cambia el número en `VERSION` y ejecuta:
 
-Repositorio configurado: https://github.com/albertuxo085/Impresorapp
+```powershell
+$compiler = .\tools\Get-InnoCompiler.ps1   # o la ruta de un ISCC.exe ya instalado
+.\build-installer.ps1 -CompilerPath $compiler -CertificateThumbprint <huella del certificado>
+```
 
-En **Actualizaciones** puedes activar «Buscar nuevas versiones automáticamente al abrir» o buscar manualmente. Está desactivado por defecto. La aplicación consulta la última Release estable del repositorio público, compara la versión y ofrece descargarla. Comprueba SHA-256, rutas del ZIP, archivos necesarios y versión del ejecutable. Antes de abrirla ofrece guardar cambios y reiniciar. No necesita permisos de administrador y no modifica controladores ni firmware.
+Se genera en `release/`: `Impresorapp-X.Y-Setup.exe`, `Impresorapp-X.Y.zip` y sus dos `.sha256`. El ejecutable se firma antes de empaquetarlo y el instalador después. `sign.ps1` busca el certificado en el almacén del usuario y en el del equipo, y usa `signtool` si está instalado o, si no, la firma de PowerShell. No se guardan certificados ni claves en el repositorio.
 
-La versión nueva se abre en una carpeta por usuario dentro de `%LOCALAPPDATA%\EtiquetaLocal\versions`. Se conserva la carpeta de preferencias histórica `EtiquetaLocal` para mantener los favoritos y rangos de versiones anteriores. Los diseños permanecen en la ubicación elegida. Los ejecutables de Impresorapp a partir de 0.16 recuerdan la versión instalada: al abrir de nuevo el acceso directo original, redirigen a la versión nueva si está disponible. Los ejecutables antiguos de EtiquetaLocal no disponen de esta función; sustituye su acceso directo al pasar por primera vez a Impresorapp.
+**Publicar.** Sube el código a `main` y crea una Release con la etiqueta `vX.Y` adjuntando los **cuatro** archivos de `release/`. Las aplicaciones instaladas necesitan el ZIP y su `.sha256` para actualizarse; no uses el ZIP automático del código fuente. Subir un commit sin publicar una Release no genera actualizaciones.
 
-No se incluyen contraseñas ni tokens. Esta implementación consulta repositorios públicos; un repositorio privado requiere una integración de autenticación adicional. El SHA-256 comprueba integridad y no sustituye una firma de código. Las consultas automáticas sin conexión no bloquean el editor. Subir un commit sin publicar una Release no produce actualizaciones.
+### Licencia
 
-## Publicar una versión
+Aún no se ha elegido una licencia para el código propio del proyecto. La biblioteca QRCoder tiene licencia MIT (ver `THIRD_PARTY.md`). El repositorio no incluye registros, configuraciones personales, firmware ni controladores.
 
-1. Sube **el contenido de esta carpeta** a la raíz del repositorio, incluidos `.github/workflows`, `lib` y `VERSION`.
-2. Para la versión siguiente, cambia `VERSION` (por ejemplo, `0.18`) y añade los cambios de código. El número del ejecutable, metadatos y actualizador se generan desde ese archivo.
-3. Sube el commit y una etiqueta que coincida, por ejemplo `v0.18`.
-4. El workflow Windows prepara el compilador oficial, compila, ejecuta las pruebas, crea el instalador y un borrador con EXE, ZIP y ambos SHA-256, y después lo publica como última versión. GitHub Actions debe estar habilitado y permitir escritura de contenido para este workflow.
-5. Revisa el resultado en Actions y Releases. No reutilices una etiqueta ya publicada. Si el workflow falla después de crear el borrador, revisa el borrador y los archivos antes de publicarlo manualmente.
+---
 
-Los workflows se han preparado y se ha probado el empaquetado local. El instalador se ha probado desplegando los archivos en una carpeta aislada (modo de prueba sin registro ni accesos) y ejecutando las pruebas internas del programa desplegado. La integración de accesos/desinstalación en Windows y la ejecución real de Actions y la descarga desde una Release quedan pendientes hasta subir el proyecto y publicar la primera versión.
+## English
 
-## Impresión y límites
+Label and sign editor for 64-bit Windows 10/11. **Version 0.19.**
 
-La Toshiba B-FV4D necesita etiquetas térmicas directas, Z Mode compatible con ZPL y sensor/calibración adecuados. Cada trabajo envía las medidas del diseño; el rollo físico debe coincidir. El perfil Toshiba limita el ancho a 101,6 mm y usa 203 dpi. DYMO utiliza el mismo editor y requiere Bluetooth LE. Los QR se generan localmente, con texto Unicode o URL, hasta 1200 bytes UTF-8; comprueba su lectura física, especialmente en cinta estrecha.
+Author: **Alberto Marín (albertuxo85)**.
 
-USB permite detectar y guardar dispositivos; **la impresión directa USB sigue pendiente**. No imprime mediante colas compartidas de Windows. La ubicación de favoritos es local; no cambia la impresora. SNMP usa consultas de lectura con comunidad `public` y no consulta la base de datos de Print Audit.
+Design labels with text, images, QR codes, Code 39, emojis, frames and lines, with smart guides while moving elements. Includes roll label formats, 12 mm DYMO tape and A5/A4/A3 paper, favourites, and network and USB printer discovery.
 
-Las pruebas internas no realizan barridos de red ni envían impresiones. Incluyen persistencia, márgenes, ZPL, protocolo DYMO, QR, guías, alineación, guardado atómico, versiones, integridad del paquete y protección de rutas ZIP. Se ha verificado aparte la decodificación QR del mapa ZPL a 203 dpi. La impresión física de funciones nuevas debe probarse con el dispositivo de destino.
+- **Network label printers** (Ethernet/Wi-Fi) via ZPL, for example Zebra ZT231 or Toshiba B-FV4D in Z mode.
+- **DYMO LetraTag 200B over Bluetooth** (experimental).
+- **Paper** through the printers installed in Windows and their drivers.
 
-## Licencia y publicación
+### Install
 
-No se ha elegido una licencia para el código propio del proyecto. Decide su licencia antes de distribuirlo como software de código abierto. La biblioteca QRCoder tiene licencia MIT incluida. Consulta `THIRD_PARTY.md`. No se incluyen registros, configuraciones personales, firmware ni controladores.
+1. Download **`Impresorapp-0.19-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+2. Run it. It installs for the current user in `%LOCALAPPDATA%\Programs\Impresorapp`, without administrator rights, with a Start menu shortcut and an optional desktop shortcut.
+3. Requires .NET Framework 4.8 (included in up-to-date Windows 10/11; the installer warns if it is missing).
+
+To uninstall, use *Windows Settings → Apps*. Your designs and preferences are kept.
+
+### Digital signature
+
+The application and the installer are **digitally signed by Azor Ambiental Holdco S.L.U.**, with a timestamp. It is an internal company certificate: on computers with the Azor certificate installed, Windows shows a verified publisher. On other computers you may see an unknown publisher or SmartScreen warning.
+
+### Updates
+
+In the **Actualizaciones** (Updates) menu you can check for new versions or enable automatic checks on start-up (off by default). The app reads the latest Release of this repository, verifies the package SHA-256 and offers to save your changes before opening the new version. No administrator rights are needed and no drivers or firmware are changed.
+
+New versions are stored in `%LOCALAPPDATA%\EtiquetaLocal\versions`. Favourites and search ranges from earlier versions are kept, and the original shortcut always opens the latest version.
+
+### Saving designs
+
+*Save* and *Save as* open **Documents\Diseños Etiquetas** by default (created if missing, OneDrive redirection respected). You can choose any other folder. When closing, opening another design or updating, the app offers to save pending changes.
+
+`.etiqueta` files contain the design and its images, but not printer preferences. Designs from earlier versions remain compatible.
+
+### Printing and limits
+
+- **Toshiba B-FV4D:** needs direct thermal labels, Z Mode (ZPL) and a calibrated sensor. Maximum width 101.6 mm at 203 dpi. The physical roll must match the design size.
+- **DYMO LetraTag:** 12 mm tape, 25 to 200 mm long, Bluetooth LE. New text and emojis share the same size, the largest that fits with a minimal margin, and are centred on the tape.
+- **QR codes:** generated locally, with text or URLs up to 1200 UTF-8 bytes. Check that they scan well, especially on narrow tape.
+- **USB:** detects and saves devices, but **direct USB printing is not available yet**. It does not print through shared Windows queues.
+- **Network discovery:** uses read-only SNMP with the `public` community. It does not query the Print Audit database.
+
+### For developers
+
+**Build and test.** Requires 64-bit Windows with .NET Framework 4.8 and its WinRT references. QRCoder is included in `lib` with its licence; nothing is downloaded at build time.
+
+```powershell
+.\build.ps1 -Test
+```
+
+The built-in tests do not scan the network or send print jobs.
+
+**Create a signed release.** Change the number in `VERSION` and run:
+
+```powershell
+$compiler = .\tools\Get-InnoCompiler.ps1   # or the path to an installed ISCC.exe
+.\build-installer.ps1 -CompilerPath $compiler -CertificateThumbprint <certificate thumbprint>
+```
+
+This creates in `release/`: `Impresorapp-X.Y-Setup.exe`, `Impresorapp-X.Y.zip` and both `.sha256` files. The executable is signed before packaging and the installer afterwards. `sign.ps1` looks for the certificate in the user and machine stores, and uses `signtool` when installed or PowerShell signing otherwise. No certificates or keys are stored in the repository.
+
+**Publish.** Push the code to `main` and create a Release tagged `vX.Y` with all **four** files from `release/`. Installed apps need the ZIP and its `.sha256` to update; do not use GitHub's automatic source code ZIP. Pushing a commit without publishing a Release does not trigger updates.
+
+### Licence
+
+No licence has been chosen yet for the project's own code. The QRCoder library is MIT-licensed (see `THIRD_PARTY.md`). The repository contains no logs, personal settings, firmware or drivers.
