@@ -1,6 +1,6 @@
-# Impresorapp 0.20
+# Impresorapp 0.21
 
-Descomprime toda esta carpeta y abre Impresorapp-0.20.exe. Conserva QRCoder.dll junto al ejecutable.
+Descomprime toda esta carpeta y abre Impresorapp-0.21.exe. Conserva QRCoder.dll junto al ejecutable.
 
 GUARDAR: abre un diálogo en Documentos\Diseños Etiquetas y crea la carpeta si hace falta. Puedes elegir otra carpeta o nombre. Cancelar conserva los cambios pendientes.
 
@@ -15,3 +15,5 @@ Versión 0.18: franja de impresora compacta, en una sola línea y con letra más
 Versión 0.19: en la cinta DYMO de 12 mm, el texto y los emojis nuevos usan el mismo tamaño (el mayor que cabe con un margen mínimo), quedan centrados en la cinta y se colocan uno tras otro con el mismo espacio. Imágenes, QR y códigos de barras nuevos ocupan la altura útil de la cinta.
 
 Versión 0.20: interfaz reorganizada para que sea más fácil de usar, sin quitar ninguna opción. Menús Archivo, Editar, Impresoras y Ayuda; un solo botón Imprimir con la impresora activa a su lado; guía de 3 pasos; panel de bienvenida; propiedades por secciones en castellano (Sí/No); pestaña Posición; ventana Impresoras con tarjetas «En uso» y «Predeterminada», búsqueda en red con opciones avanzadas y la DYMO LetraTag guardada como una impresora más, con conexión por Bluetooth en 3 pasos. Mejoras para teclado y lectores de pantalla.
+
+Versión 0.21: las imágenes y demás elementos pueden sobresalir de la etiqueta por cualquier lado (antes solo por la derecha y por abajo); solo se avisa si lo que se imprime queda fuera. El panel de bienvenida aparece únicamente al abrir el programa, no al crear una etiqueta nueva, y se puede cerrar con ✕.
