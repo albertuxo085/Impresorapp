@@ -6,7 +6,7 @@
 
 ## Español
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.20.**
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.21.**
 
 Autor: **Alberto Marín (albertuxo85)**.
 
@@ -18,7 +18,7 @@ Diseña etiquetas con texto, imágenes, códigos QR, Code 39, emojis, marcos y l
 
 ### Instalar
 
-1. Descarga **`Impresorapp-0.20-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Descarga **`Impresorapp-0.21-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Ejecútalo. Se instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir permisos de administrador, con acceso en el menú Inicio y, si quieres, en el escritorio.
 3. Necesita .NET Framework 4.8 (incluido en Windows 10/11 actualizados; el instalador avisa si falta).
 
@@ -77,7 +77,7 @@ Aún no se ha elegido una licencia para el código propio del proyecto. La bibli
 
 ## English
 
-Label and sign editor for 64-bit Windows 10/11. **Version 0.20.**
+Label and sign editor for 64-bit Windows 10/11. **Version 0.21.**
 
 Author: **Alberto Marín (albertuxo85)**.
 
@@ -89,7 +89,7 @@ Design labels with text, images, QR codes, Code 39, emojis, frames and lines, wi
 
 ### Install
 
-1. Download **`Impresorapp-0.20-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Download **`Impresorapp-0.21-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Run it. It installs for the current user in `%LOCALAPPDATA%\Programs\Impresorapp`, without administrator rights, with a Start menu shortcut and an optional desktop shortcut.
 3. Requires .NET Framework 4.8 (included in up-to-date Windows 10/11; the installer warns if it is missing).
 
