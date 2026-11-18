@@ -1,0 +1,1 @@
+using System.Reflection; [assembly:AssemblyVersion("0.16.0.0")] [assembly:AssemblyFileVersion("0.16.0.0")] [assembly:AssemblyProduct("Impresorapp")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="0.16"; } }

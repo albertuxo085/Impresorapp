@@ -1,0 +1,1 @@
+OK: guardado/carga UTF-8, límites, rango IPv4, validación Code39, renderizado, mapa monocromo y segmentos ZPL. LetraTag: orden de bits, checksum, fragmentación y reconstrucción comprobados. Pruebas TCP/Bluetooth físicas pendientes. No se ha ejecutado barrido de red ni impresión física.

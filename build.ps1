@@ -1,0 +1,45 @@
+﻿param([switch]$Test,[string]$OutputDirectory)
+$ErrorActionPreference = 'Stop'
+$root = $PSScriptRoot
+$out = Join-Path $root 'dist'
+if ($OutputDirectory) { $out = [System.IO.Path]::GetFullPath($OutputDirectory) }
+$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+if (-not (Test-Path -LiteralPath $csc)) { throw 'Se necesita Windows de 64 bits y .NET Framework 4.8.' }
+$refs = @((Join-Path $root 'lib\QRCoder.dll'),'System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','System.dll','System.Management.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll')
+foreach ($name in @('Windows.Devices','Windows.Foundation','Windows.Storage')) {
+    $path = Join-Path $env:WINDIR ('System32\WinMetadata\'+$name+'.winmd')
+    if (-not (Test-Path -LiteralPath $path)) { throw "Falta la referencia de Windows: $path" }
+    $refs += $path
+}
+foreach ($name in @('System.Runtime','System.Runtime.InteropServices.WindowsRuntime')) {
+    $base = Join-Path $env:WINDIR ('Microsoft.NET\assembly\GAC_MSIL\'+$name)
+    $assembly = Get-ChildItem -LiteralPath $base -Recurse -Filter ($name+'.dll') | Select-Object -First 1
+    if (-not $assembly) { throw "Falta la referencia .NET: $name" }
+    $refs += $assembly.FullName
+}
+New-Item -ItemType Directory -Path $out -Force | Out-Null
+$versionText = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
+if ($versionText -notmatch '^\d+\.\d+(\.\d+){0,2}$') { throw 'VERSION debe contener una versión numérica, por ejemplo 0.16.' }
+$parsed = [Version]::Parse($versionText)
+$assemblyVersion = '{0}.{1}.{2}.{3}' -f $parsed.Major,$parsed.Minor,[Math]::Max(0,$parsed.Build),[Math]::Max(0,$parsed.Revision)
+$versionSource = Join-Path $out 'AppVersion.g.cs'
+$versionCode = 'using System.Reflection; [assembly:AssemblyVersion("'+$assemblyVersion+'")] [assembly:AssemblyFileVersion("'+$assemblyVersion+'")] [assembly:AssemblyProduct("Impresorapp")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="'+$versionText+'"; } }'
+[IO.File]::WriteAllText($versionSource,$versionCode)
+$exe = Join-Path $out ('Impresorapp-'+$versionText+'.exe')
+$arguments = @(('/win32icon:'+(Join-Path $root 'assets\EtiquetaLocal.ico')),'/nologo','/target:winexe',('/out:'+$exe))
+$arguments += $versionSource
+$arguments += $refs | ForEach-Object { '/r:'+$_ }
+$arguments += Get-ChildItem -LiteralPath (Join-Path $root 'src') -Filter '*.cs' | ForEach-Object FullName
+& $csc @arguments
+if ($LASTEXITCODE -ne 0) { throw 'La compilacion ha fallado.' }
+Copy-Item -LiteralPath (Join-Path $root 'src\App.config') -Destination ($exe+'.config') -Force
+Copy-Item -Path (Join-Path $root 'examples\*.etiqueta') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'lib\QRCoder.dll') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'lib\QRCoder-LICENSE.txt') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'update-defaults.json') -Destination $out -Force
+if ($Test) {
+    $process = Start-Process -FilePath $exe -ArgumentList '--self-test' -Wait -PassThru -WindowStyle Hidden
+    if ($process.ExitCode -ne 0) { throw 'Las pruebas han fallado. Consulta dist\error_pruebas.txt.' }
+    Write-Host 'Pruebas correctas. No se ha enviado ninguna impresion ni realizado un barrido de red.'
+}
+Write-Host "Aplicacion compilada: $exe"
