@@ -1,3 +1,44 @@
+## Versión 1.0: versión definitiva
+
+- **Imprimir directo**: el botón Imprimir envía la etiqueta a la impresora elegida (1 copia) sin ventanas intermedias. Al lado, **Vista previa y opciones** abre la vista previa, la impresora, las copias y las preferencias (también Ctrl+Mayús+P).
+- **Catálogo de etiquetas para Azor Ambiental**: 48 plantillas en 9 categorías (residuos peligrosos, reciclaje, seguridad, almacén, muestras, inventario, mantenimiento, contenedores y oficina), con buscador. Se abre desde Archivo, la barra superior y la ventana Nueva etiqueta. Los códigos LER y pictogramas son orientativos: revísalos con el responsable de medio ambiente.
+- **Aviso del elemento que queda fuera**: al imprimir se indica qué elemento se sale de la etiqueta y se selecciona.
+- Programa e instalador **firmados digitalmente por Azor Ambiental Holdco S.L.U.** (certificado interno), en sus dos variantes: Impresorapp e Impresorapp Sencilla.
+
+## Nuevo en 0.26: recorte físico del diseño
+
+Las imágenes que sobresalen se recortan al contorno de la etiqueta. El recorte de cada elemento ahora se intersecta con el de la página, en lugar de sustituirlo. La vista previa y la impresión mediante controlador usan la misma imagen final a 203 ppp, adecuada para las Toshiba de 203 ppp probadas. El controlador recibe solo el área física de la etiqueta, sin el sobrante de la imagen original. No se cambian los desplazamientos privados del controlador ni la calibración de la impresora.
+
+Se comprueban con pruebas imágenes que sobresalen por los cuatro lados, tamaño físico y compensación del origen imprimible. La vista previa permanece cuadrada para un formato cuadrado. El envío guarda marcas de tiempo y geometría (sin el contenido del diseño) en %LOCALAPPDATA%\EtiquetaLocal\ultima-impresion.log para localizar demoras del controlador/servidor. La verificación física sigue pendiente; la entrega a Windows no confirma que la etiqueta haya salido correctamente.
+
+Distribución sin firma Authenticode. No instala certificados ni controladores.
+
+## Nuevo en 0.25: vista previa local y espera sin bloquear
+
+La vista previa de etiquetas con controlador se dibuja localmente, sin crear un contexto de impresión ni consultar al servidor. Seleccionar la cola no comprueba su disponibilidad en red. La lista de impresoras se carga en segundo plano y se conserva durante la sesión.
+
+Las preferencias del fabricante se abren en su propia ventana de Windows. Guarda y cierra esa ventana antes de enviar el trabajo. La consulta de formatos y el envío GDI se ejecutan en segundo plano, con estado visible. Se puede cancelar antes de iniciar el envío; después se utiliza la cola de Windows para detener el trabajo. No hay reintentos automáticos. La entrega a Windows no confirma la impresión física.
+
+La vista previa muestra el diseño, no los desplazamientos privados del controlador ni la calibración del rollo. Se mantienen la comprobación del tamaño y la impresión al 100 %. La latencia del servidor al enviar puede continuar: esta versión evita repetir la consulta para generar la vista previa y mantiene la interfaz disponible.
+
+Pruebas: renderizado local con medidas y posiciones verificadas, cancelación antes del envío, protección del trabajo ya iniciado y pruebas existentes. Pendiente: prueba física en la Toshiba compartida. No se han modificado certificados, controladores, emulación ni parámetros de la impresora.
+
+Esta distribución 0.25 no tiene firma Authenticode. El certificado Seagull usado para confiar en el controlador Toshiba es independiente de la firma del programa.
+
+Distribución 0.25 preparada en este entorno sin firma Authenticode: el proveedor de la clave del certificado instalado no permite firmar aquí. El script sign.ps1 sigue disponible para firmar desde el equipo/entorno que tenga acceso a esa clave. No se han exportado certificados ni claves privadas.
+
+<!-- Versión actual: 1.0 -->
+
+## Ruta de controlador incorporada en 0.24
+
+En **Impresoras → Usar controlador de Windows / servidor** selecciona una cola instalada en este equipo, incluida una impresora compartida del servidor. La selección se guarda por usuario y aparece en el indicador de impresora. **Imprimir** abre una vista previa con las medidas del diseño al 100 %, sin escalado. En Preferencias se abre la ventana del fabricante; guarda los cambios allí antes de imprimir.
+
+La opción usa GDI y el controlador traduce al lenguaje nativo, por ejemplo TPCL. No envía ZPL por TCP ni cambia la emulación física. Si no existe un formato coincidente, se solicita al controlador el tamaño personalizado del diseño; si devuelve otro tamaño, se impide continuar y se pide configurar el formato en Windows. Los márgenes no imprimibles del dispositivo siguen aplicándose. Instala o conecta primero la cola compartida en cada equipo; el programa no instala controladores automáticamente.
+
+Para volver al envío directo, entra en Impresoras → Usar envío directo ZPL y selecciona una impresora compatible. Papel A4/A3 y DYMO mantienen sus rutas propias. Las conexiones USB pueden imprimirse mediante una cola instalada; el transporte USB directo sin controlador sigue pendiente.
+
+Comprobados: conversión mm/unidades Windows, correspondencia de tamaños, rechazo de A4 para una etiqueta de 50 × 50 mm, renderizado GDI a tamaño real y persistencia de nombres UNC con Unicode. La impresión física con el servidor queda pendiente.
+
 # Impresorapp
 
 **[Español](#español) · [English](#english)**
@@ -6,7 +47,7 @@
 
 ## Español
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 0.23.**
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 1.0.**
 
 Autor: **Alberto Marín (albertuxo85)**.
 
@@ -18,7 +59,7 @@ Diseña etiquetas con texto, imágenes, códigos QR, Code 39, emojis, marcos y l
 
 ### Instalar
 
-1. Descarga **`Impresorapp-0.23-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Descarga **`Impresorapp-1.0-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Ejecútalo. Se instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir permisos de administrador, con acceso en el menú Inicio y, si quieres, en el escritorio.
 3. Necesita .NET Framework 4.8 (incluido en Windows 10/11 actualizados; el instalador avisa si falta).
 
@@ -26,7 +67,7 @@ Para desinstalar, usa *Configuración de Windows → Aplicaciones*. Tus diseños
 
 ### Firma digital
 
-El programa y el instalador están **firmados digitalmente por Azor Ambiental Holdco S.L.U.**, con sello de tiempo. Es un certificado interno de la empresa: en los equipos que tengan instalado el certificado de Azor, Windows muestra el editor verificado. En otros equipos puede aparecer un aviso de editor desconocido o de SmartScreen.
+La distribución 0.25 se entrega sin firma Authenticode. Windows puede mostrar un aviso de editor desconocido. El proceso de firma sigue disponible en sign.ps1.
 
 ### Actualizar
 
@@ -89,7 +130,7 @@ Design labels with text, images, QR codes, Code 39, emojis, frames and lines, wi
 
 ### Install
 
-1. Download **`Impresorapp-0.23-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Download **`Impresorapp-1.0-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Run it. It installs for the current user in `%LOCALAPPDATA%\Programs\Impresorapp`, without administrator rights, with a Start menu shortcut and an optional desktop shortcut.
 3. Requires .NET Framework 4.8 (included in up-to-date Windows 10/11; the installer warns if it is missing).
 

@@ -1,4 +1,4 @@
-param([string]$CompilerPath,[string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
+param([switch]$Sencilla,[string]$CompilerPath,[string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
 $versionText=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
@@ -9,14 +9,17 @@ if (-not $CompilerPath) {
 }
 if (-not $CompilerPath -or -not (Test-Path -LiteralPath $CompilerPath)) { throw 'Instala Inno Setup 7/6 desde https://jrsoftware.org/inno-setup/downloads o indica -CompilerPath.' }
 $out=if($OutputDirectory){[IO.Path]::GetFullPath($OutputDirectory)}else{Join-Path $root 'release'}
-& (Join-Path $root 'package.ps1') -OutputDirectory $out -CertificateThumbprint $CertificateThumbprint -SignToolPath $SignToolPath
+$base = if ($Sencilla) {'Impresorapp-Sencilla-'} else {'Impresorapp-'}
+& (Join-Path $root 'package.ps1') -Sencilla:$Sencilla -OutputDirectory $out -CertificateThumbprint $CertificateThumbprint -SignToolPath $SignToolPath
 $inputRoot=Join-Path $out ('installer-input-'+[Guid]::NewGuid().ToString('N'))
-Expand-Archive -LiteralPath (Join-Path $out ('Impresorapp-'+$versionText+'.zip')) -DestinationPath $inputRoot
-$inputDir=Join-Path $inputRoot ('Impresorapp-'+$versionText)
-$compilerArgs=@('/Qp',('/DAppVersion='+$versionText),('/DInputDir='+$inputDir),('/DOutputDir='+$out))
+Expand-Archive -LiteralPath (Join-Path $out ($base+$versionText+'.zip')) -DestinationPath $inputRoot
+$inputDir=Join-Path $inputRoot ($base+$versionText)
+$compilerArgs=@('/Qp')
+if ($Sencilla) { $compilerArgs += '/DSencilla=1' }
+$compilerArgs+=@(('/DAppVersion='+$versionText),('/DInputDir='+$inputDir),('/DOutputDir='+$out))
 & $CompilerPath @compilerArgs (Join-Path $root 'installer\Impresorapp.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Ha fallado la creación del instalador.' }
-$setup=Join-Path $out ('Impresorapp-'+$versionText+'-Setup.exe')
+$setup=Join-Path $out ($base+$versionText+'-Setup.exe')
 if ($CertificateThumbprint) { & (Join-Path $root 'sign.ps1') -FilePath $setup -CertificateThumbprint $CertificateThumbprint -SignToolPath $SignToolPath }
 $hash=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText(($setup+'.sha256'),$hash+'  '+[IO.Path]::GetFileName($setup)+[Environment]::NewLine,(New-Object Text.UTF8Encoding($false)))

@@ -1,4 +1,4 @@
-﻿param([switch]$Test,[string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
+﻿param([switch]$Test,[switch]$Sencilla,[string]$OutputDirectory,[string]$CertificateThumbprint,[string]$SignToolPath)
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $out = Join-Path $root 'dist'
@@ -22,11 +22,15 @@ $versionText = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim(
 if ($versionText -notmatch '^\d+\.\d+(\.\d+){0,2}$') { throw 'VERSION debe contener una versión numérica, por ejemplo 0.16.' }
 $parsed = [Version]::Parse($versionText)
 $assemblyVersion = '{0}.{1}.{2}.{3}' -f $parsed.Major,$parsed.Minor,[Math]::Max(0,$parsed.Build),[Math]::Max(0,$parsed.Revision)
-$versionSource = Join-Path $out 'AppVersion.g.cs'
-$versionCode = 'using System.Reflection; [assembly:AssemblyVersion("'+$assemblyVersion+'")] [assembly:AssemblyFileVersion("'+$assemblyVersion+'")] [assembly:AssemblyProduct("Impresorapp")] [assembly:AssemblyCompany("Alberto Marín (albertuxo85)")] [assembly:AssemblyCopyright("Copyright © 2026 Alberto Marín (albertuxo85)")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="'+$versionText+'"; } }'
+$appName = if ($Sencilla) {'Impresorapp Sencilla'} else {'Impresorapp'}
+$exeBase = if ($Sencilla) {'Impresorapp-Sencilla-'} else {'Impresorapp-'}
+$versionSource = Join-Path $out ($exeBase+'AppVersion.g.cs')
+$versionCode = 'using System.Reflection; [assembly:AssemblyVersion("'+$assemblyVersion+'")] [assembly:AssemblyFileVersion("'+$assemblyVersion+'")] [assembly:AssemblyProduct("'+$appName+'")] [assembly:AssemblyCompany("Alberto Marín (albertuxo85)")] [assembly:AssemblyCopyright("Copyright © 2026 Alberto Marín (albertuxo85)")] namespace EtiquetaLocal { public static class AppVersion { public const string Text="'+$versionText+'"; public const string Name="'+$appName+'"; } }'
 [IO.File]::WriteAllText($versionSource,$versionCode)
-$exe = Join-Path $out ('Impresorapp-'+$versionText+'.exe')
-$arguments = @(('/win32icon:'+(Join-Path $root 'assets\EtiquetaLocal.ico')),'/nologo','/target:winexe',('/out:'+$exe))
+$exe = Join-Path $out ($exeBase+$versionText+'.exe')
+$arguments = @()
+if ($Sencilla) { $arguments += '/define:SENCILLA' }
+$arguments += @(('/win32icon:'+(Join-Path $root 'assets\EtiquetaLocal.ico')),'/nologo','/target:winexe',('/out:'+$exe))
 $arguments += $versionSource
 $arguments += $refs | ForEach-Object { '/r:'+$_ }
 $arguments += Get-ChildItem -LiteralPath (Join-Path $root 'src') -Filter '*.cs' | ForEach-Object FullName
