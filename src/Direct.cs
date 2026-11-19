@@ -94,7 +94,7 @@ namespace EtiquetaLocal {
     else MessageBox.Show(this,ex.GetBaseException().Message,"Impresión directa");}finally{send.Enabled=export.Enabled=true;ControlBox=true;}}
   SavedPrinter CurrentPrinter(){var p=savedChoice.SelectedItem as SavedPrinter;return p??new SavedPrinter{Alias=String.IsNullOrWhiteSpace(address.Text)?"La impresora":address.Text.Trim(),Model=""};}
   string PrinterModel(){var p=CurrentPrinter();return String.IsNullOrWhiteSpace(p.Model)?p.Alias:p.Model;}
-  void PrintWithWindows(){try{PaperPrinting.Show(this,label);}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir con el controlador de Windows");}}
+  void PrintWithWindows(){try{DriverPrinting.Show(this,label);}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir con el controlador de Windows");}}
   void Export(){try{byte[] data=Build();using(var d=new SaveFileDialog{Filter="Instrucciones ZPL|*.zpl",FileName="etiqueta.zpl"})if(d.ShowDialog()==DialogResult.OK){File.WriteAllBytes(d.FileName,data);info.Text="ZPL exportado. No se ha enviado nada a la impresora.";}}catch(Exception ex){MessageBox.Show(ex.Message);}}
  }
 }

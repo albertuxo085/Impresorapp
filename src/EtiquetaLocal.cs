@@ -33,12 +33,13 @@ namespace EtiquetaLocal {
   [DataMember,DisplayName("Fuente"),Category("Estilo"),TypeConverter(typeof(FontNameConverter)),Description("Tipo de letra instalado en Windows.")] public string FontName {get;set;}
   [DataMember,DisplayName("Mantener proporciones"),Category("Estilo"),TypeConverter(typeof(SiNoConverter)),Description("Si es Sí, la imagen no se deforma al cambiar su tamaño.")] public bool LockAspect {get;set;}
   [DataMember,Browsable(false)] public float ImageAspect {get;set;}
+  [DataMember,DisplayName("Calidad al imprimir"),Category("Estilo"),TypeConverter(typeof(ImageModeConverter)),Description("Automática: elige sola. Nítida: blanco y negro puro, ideal para logotipos, iconos y texto. Fotografía: tramado de puntos para conservar los grises.")] public string ImageMode {get;set;}
   public Element Copy(){return (Element)MemberwiseClone();}
   [DataMember,DisplayName("Grosor de línea (mm)"),Category("Estilo"),Description("Grosor del trazo del marco o de la línea.")] public float Stroke {get;set;}
   // El panel de propiedades solo muestra los campos útiles para cada tipo de elemento.
   static string[] VisibleFor(string kind){
    if(kind=="Texto")return new[]{"Kind","Text","FontName","FontSize","Bold","Italic","Underline","TextAlign","X","Y","W","H"};
-   if(kind=="Imagen")return new[]{"Kind","LockAspect","X","Y","W","H"};
+   if(kind=="Imagen")return new[]{"Kind","LockAspect","ImageMode","X","Y","W","H"};
    if(kind=="Código 39"||kind=="QR")return new[]{"Kind","Text","X","Y","W","H"};
    if(kind=="Marco"||kind=="Línea")return new[]{"Kind","Stroke","X","Y","W","H"};
    return null;
@@ -76,6 +77,7 @@ namespace EtiquetaLocal {
    if(l==null||l.Version!=1||!Valid(l.Width)||!Valid(l.Height)||l.Width<5||l.Height<5||l.Width>1000||l.Height>1000||l.Elements==null||l.Elements.Count>500)throw new Exception("Plantilla no válida: medidas de 5 a 1000 mm y máximo 500 elementos.");
    foreach(var e in l.Elements){
     if(e==null||!new[]{"Texto","Marco","Línea","Imagen","Código 39","QR"}.Contains(e.Kind)||!Valid(e.X)||!Valid(e.Y)||!Valid(e.W)||!Valid(e.H)||e.X<-1000||e.Y<-1000||e.X>2000||e.Y>2000||e.W<=0||e.H<=0||e.W>1000||e.H>1000||!Valid(e.FontSize)||e.FontSize<1||e.FontSize>300||!Valid(e.Stroke)||e.Stroke<=0||e.Stroke>10)throw new Exception("Hay un elemento con propiedades no válidas.");
+    if(e.Kind=="Imagen"&&!String.IsNullOrEmpty(e.ImageMode)&&!Sharpness.Modes.Contains(e.ImageMode))throw new Exception("Calidad de imagen no válida.");
     if(e.Kind=="Texto"&&!String.IsNullOrEmpty(e.TextAlign)&&!new[]{"Izquierda","Centro","Derecha"}.Contains(e.TextAlign))throw new Exception("Alineación no válida.");
     if(e.Kind=="QR")QrSupport.Matrix(e.Text);
     if(e.Kind=="Código 39")Barcode.Check(e.Text);
@@ -98,7 +100,7 @@ namespace EtiquetaLocal {
  public static class Render {
   public static void Draw(Graphics g,Label label){
    foreach(var e in label.Elements){
-    var state=g.Save();g.SetClip(new RectangleF(e.X,e.Y,e.W,e.H));
+    var state=g.Save();g.SetClip(new RectangleF(e.X,e.Y,e.W,e.H),CombineMode.Intersect);
     try{
      if(e.Kind=="Texto")using(var f=Editing.FontFor(e))using(var sf=new StringFormat()){sf.Trimming=StringTrimming.None;sf.Alignment=e.TextAlign=="Centro"?StringAlignment.Center:e.TextAlign=="Derecha"?StringAlignment.Far:StringAlignment.Near;g.DrawString(e.Text??"",f,Brushes.Black,new RectangleF(e.X,e.Y,e.W,e.H),sf);}
      else if(e.Kind=="Marco")using(var pen=new Pen(Color.Black,e.Stroke))g.DrawRectangle(pen,e.X+e.Stroke/2,e.Y+e.Stroke/2,Math.Max(0,e.W-e.Stroke),Math.Max(0,e.H-e.Stroke));
@@ -126,32 +128,44 @@ namespace EtiquetaLocal {
    if(Selected!=null){var e=Selected;using(var p=new Pen(Color.FromArgb(39,126,82),2)){p.DashStyle=DashStyle.Dash;g.DrawRectangle(p,ox+e.X*scale,oy+e.Y*scale,e.W*scale,e.H*scale);}g.FillRectangle(Brushes.SeaGreen,ox+(e.X+e.W)*scale-4,oy+(e.Y+e.H)*scale-4,8,8);}
    g.DrawString(Label.Width+" × "+Label.Height+" mm  ·  Cuadrícula: 5 mm",Font,Brushes.DimGray,ox,oy+h+8);
   }
-  protected override void OnMouseDown(MouseEventArgs e){base.OnMouseDown(e);Focus();if(Label==null||e.Button!=MouseButtons.Left)return;LayoutLabel();
+  public PointF ToLabel(Point p){LayoutLabel();return new PointF((p.X-ox)/scale,(p.Y-oy)/scale);}
+  public Element ElementAt(Point p){if(Label==null)return null;LayoutLabel();return Label.Elements.LastOrDefault(v=>new RectangleF(ox+v.X*scale,oy+v.Y*scale,v.W*scale,v.H*scale).Contains(p));}
+  bool OnHandle(Point p){return Selected!=null&&Math.Abs(p.X-(ox+(Selected.X+Selected.W)*scale))<9&&Math.Abs(p.Y-(oy+(Selected.Y+Selected.H)*scale))<9;}
+  protected override bool IsInputKey(Keys keyData){var k=keyData&Keys.KeyCode;if(k==Keys.Left||k==Keys.Right||k==Keys.Up||k==Keys.Down)return true;return base.IsInputKey(keyData);}
+  protected override void OnMouseDown(MouseEventArgs e){base.OnMouseDown(e);Focus();if(Label==null)return;LayoutLabel();
+   if(e.Button==MouseButtons.Right){Selected=ElementAt(e.Location);if(SelectionChanged!=null)SelectionChanged();Invalidate();return;}
+   if(e.Button!=MouseButtons.Left)return;
    guideX=guideY=null;resize=Selected!=null&&Math.Abs(e.X-(ox+(Selected.X+Selected.W)*scale))<9&&Math.Abs(e.Y-(oy+(Selected.Y+Selected.H)*scale))<9;
    if(!resize)Selected=Label.Elements.LastOrDefault(v=>new RectangleF(ox+v.X*scale,oy+v.Y*scale,v.W*scale,v.H*scale).Contains(e.Location));
    if(SelectionChanged!=null)SelectionChanged();if(Selected!=null){if(BeforeChange!=null)BeforeChange();start=e.Location;sx=Selected.X;sy=Selected.Y;sw=Selected.W;sh=Selected.H;startFont=Selected.FontSize;drag=true;Capture=true;}Invalidate();
   }
-  protected override void OnMouseMove(MouseEventArgs e){base.OnMouseMove(e);if(!drag||Selected==null)return;float dx=(e.X-start.X)/scale,dy=(e.Y-start.Y)/scale;
+  protected override void OnMouseMove(MouseEventArgs e){base.OnMouseMove(e);if(!drag&&Label!=null){LayoutLabel();Cursor=OnHandle(e.Location)?Cursors.SizeNWSE:ElementAt(e.Location)!=null?Cursors.SizeAll:Cursors.Default;}if(!drag||Selected==null)return;float dx=(e.X-start.X)/scale,dy=(e.Y-start.Y)/scale;
    if(resize){if(Selected.Kind=="Texto"||Selected.Kind=="QR"||(Selected.Kind=="Imagen"&&Selected.LockAspect)){float factor=Math.Abs(dx/Math.Max(.1f,sw))>=Math.Abs(dy/Math.Max(.1f,sh))?(sw+dx)/sw:(sh+dy)/sh;factor=Math.Max(.5f/Math.Min(sw,sh),Math.Min(factor,1000f/Math.Max(sw,sh)));if(Selected.Kind=="Texto"){Selected.FontSize=Math.Max(1,Math.Min(300,startFont*factor));factor=Selected.FontSize/startFont;}Selected.W=sw*factor;Selected.H=sh*factor;}else{Selected.W=(float)Math.Round(Math.Max(.5,Math.Min(1000,sw+dx)),1);Selected.H=(float)Math.Round(Math.Max(.5,Math.Min(1000,sh+dy)),1);}}else{Selected.X=(float)Math.Round(Math.Max(-1000,Math.Min(2000,sx+dx)),1);Selected.Y=(float)Math.Round(Math.Max(-1000,Math.Min(2000,sy+dy)),1);guideX=guideY=null;if(Guides&&(ModifierKeys&Keys.Alt)==0)SmartGuides.Snap(Selected,Label,5/scale,out guideX,out guideY);}Invalidate();
   }
   protected override void OnMouseUp(MouseEventArgs e){base.OnMouseUp(e);if(drag){drag=false;guideX=guideY=null;Capture=false;Invalidate();if(Changed!=null)Changed();}}
  }
- public class MainForm:Form {
+ public partial class MainForm:Form {
   bool welcomeDone;PrinterChip printerChip=new PrinterChip();StepsBar steps=new StepsBar();WelcomePanel welcome=new WelcomePanel();ToolTip chipTip=new ToolTip();
   List<Button> selectionButtons=new List<Button>();Button editButton;Control imageGroup;CheckBox guidesToggle;
   LetraTagPanel dymoPanel;Control canvasHost;Label label=new Label();Canvas canvas=new Canvas();PropertyGrid props=new PropertyGrid();ListBox items=new ListBox();ToolStripStatusLabel status=new ToolStripStatusLabel();
   ComboBox fontSelector=new ComboBox();NumericUpDown fontPoints=new NumericUpDown();CheckBox boldToggle=new CheckBox(),italicToggle=new CheckBox(),underlineToggle=new CheckBox(),aspectToggle=new CheckBox();ComboBox alignment=new ComboBox();bool formatSync;ComboBox presets=new ComboBox();NumericUpDown width=new NumericUpDown(),height=new NumericUpDown();bool syncing,dirty;string file="";Stack<string> undo=new Stack<string>();
   public MainForm(){
-   Text="Impresorapp "+AppVersion.Text+" · Sin título";Icon=Branding.AppIcon;Size=new Size(1250,820);MinimumSize=new Size(950,650);Font=new Font("Segoe UI",9);StartPosition=FormStartPosition.CenterScreen;
+   Text=AppVersion.Name+" "+AppVersion.Text+" · Sin título";Icon=Branding.AppIcon;Size=new Size(1250,820);MinimumSize=new Size(950,650);Font=new Font("Segoe UI",9);StartPosition=FormStartPosition.CenterScreen;
    // Menús: Archivo · Editar · Impresoras · Ayuda.
    var menu=new MenuStrip{Font=new Font("Segoe UI",9.5f)};
    var f=new ToolStripMenuItem("&Archivo");f.DropDownItems.Add(MenuItem("&Nueva","Ctrl+N",()=>New()));f.DropDownItems.Add(MenuItem("&Abrir…","Ctrl+O",()=>Open()));f.DropDownItems.Add(MenuItem("&Guardar","Ctrl+S",()=>Save(false)));f.DropDownItems.Add(MenuItem("Guardar &como…",null,()=>Save(true)));f.DropDownItems.Add(new ToolStripSeparator());
-   f.DropDownItems.Add(MenuItem("&Imprimir…","Ctrl+P",()=>Print()));f.DropDownItems.Add(MenuItem("Imprimir en &papel (A4 / A3)…",null,()=>PrintPaper()));f.DropDownItems.Add(new ToolStripSeparator());f.DropDownItems.Add(MenuItem("&Salir",null,()=>Close()));menu.Items.Add(f);
-   var ed=new ToolStripMenuItem("&Editar");var undoItem=MenuItem("&Deshacer","Ctrl+Z",()=>Undo());var editItem=MenuItem("&Editar contenido…","Doble clic",()=>EditText());var dupItem=MenuItem("D&uplicar",null,()=>Duplicate());var delItem=MenuItem("E&liminar","Supr",()=>Delete());var centerHItem=MenuItem("Centrar &horizontalmente",null,()=>CenterElement(true));var centerVItem=MenuItem("Centrar &verticalmente",null,()=>CenterElement(false));var guidesItem=new ToolStripMenuItem("&Guías al mover"){CheckOnClick=true,Checked=true};var exampleItem=MenuItem("Cargar un e&jemplo",null,()=>LoadExample());
-   ed.DropDownItems.AddRange(new ToolStripItem[]{undoItem,new ToolStripSeparator(),editItem,dupItem,delItem,new ToolStripSeparator(),centerHItem,centerVItem,guidesItem,new ToolStripSeparator(),exampleItem});
-   ed.DropDownOpening+=(s,e)=>{var sel=canvas.Selected;undoItem.Enabled=undo.Count>0;editItem.Enabled=sel!=null&&(sel.Kind=="Texto"||sel.Kind=="Código 39"||sel.Kind=="QR");dupItem.Enabled=delItem.Enabled=centerHItem.Enabled=centerVItem.Enabled=sel!=null;guidesItem.Checked=canvas.Guides;};
+   f.DropDownItems.Add(MenuItem("&Imprimir","Ctrl+P",()=>Print()));f.DropDownItems.Add(MenuItem("&Vista previa y opciones de impresión…","Ctrl+Mayús+P",()=>PrintOptions()));f.DropDownItems.Add(MenuItem("Ca&tálogo de etiquetas…",null,()=>ShowCatalog()));f.DropDownItems.Add(MenuItem("Imprimir en &papel (A4 / A3)…",null,()=>PrintPaper()));f.DropDownItems.Add(new ToolStripSeparator());f.DropDownItems.Add(MenuItem("&Salir",null,()=>Close()));menu.Items.Add(f);
+   var ed=new ToolStripMenuItem("&Editar");var undoItem=MenuItem("&Deshacer","Ctrl+Z",()=>Undo());var editItem=MenuItem("&Editar contenido…","Doble clic",()=>EditText());var dupItem=MenuItem("D&uplicar","Ctrl+D",()=>Duplicate());var cutItem=MenuItem("Cor&tar","Ctrl+X",()=>CopySelected(true));var copyItem=MenuItem("&Copiar","Ctrl+C",()=>CopySelected(false));var pasteItem=MenuItem("&Pegar","Ctrl+V",()=>Paste(null));var delItem=MenuItem("E&liminar","Supr",()=>Delete());var centerHItem=MenuItem("Centrar &horizontalmente",null,()=>CenterElement(true));var centerVItem=MenuItem("Centrar &verticalmente",null,()=>CenterElement(false));var guidesItem=new ToolStripMenuItem("&Guías al mover"){CheckOnClick=true,Checked=true};var exampleItem=MenuItem("Cargar un e&jemplo",null,()=>LoadExample());
+   ed.DropDownItems.AddRange(new ToolStripItem[]{undoItem,new ToolStripSeparator(),cutItem,copyItem,pasteItem,new ToolStripSeparator(),editItem,dupItem,delItem,new ToolStripSeparator(),centerHItem,centerVItem,guidesItem,new ToolStripSeparator(),exampleItem});
+   ed.DropDownOpening+=(s,e)=>{var sel=canvas.Selected;undoItem.Enabled=undo.Count>0;editItem.Enabled=sel!=null&&(sel.Kind=="Texto"||sel.Kind=="Código 39"||sel.Kind=="QR");dupItem.Enabled=delItem.Enabled=centerHItem.Enabled=centerVItem.Enabled=cutItem.Enabled=copyItem.Enabled=sel!=null;pasteItem.Enabled=CanPaste();guidesItem.Checked=canvas.Guides;};
    guidesItem.CheckedChanged+=(s,e)=>{canvas.Guides=guidesItem.Checked;if(guidesToggle!=null&&guidesToggle.Checked!=guidesItem.Checked)guidesToggle.Checked=guidesItem.Checked;};menu.Items.Add(ed);
-   var pr=new ToolStripMenuItem("&Impresoras");pr.DropDownItems.Add(MenuItem("&Mis impresoras y búsqueda…",null,()=>OpenPrinters()));pr.DropDownItems.Add(MenuItem("Conectar &DYMO por Bluetooth…",null,()=>ConnectDymo()));pr.DropDownItems.Add(MenuItem("Impresora para &papel…",null,()=>{PaperPrinting.Select(this,label);UpdatePrinterBanner();}));menu.Items.Add(pr);
+   
+#if SENCILLA
+var pr=new ToolStripMenuItem("&Impresoras");pr.DropDownItems.Add(MenuItem("Elegir &impresora de etiquetas…",null,()=>{DriverPrinting.Select(this,label);UpdatePrinterBanner();}));pr.DropDownItems.Add(MenuItem("Impresora para &papel (A4 / A3)…",null,()=>{PaperPrinting.Select(this,label);UpdatePrinterBanner();}));menu.Items.Add(pr);
+#else
+var pr=new ToolStripMenuItem("&Impresoras");pr.DropDownItems.Add(MenuItem("Usar &controlador de Windows / servidor…",null,()=>{DriverPrinting.Select(this,label);UpdatePrinterBanner();}));pr.DropDownItems.Add(MenuItem("Usar envío &directo ZPL…",null,()=>{OpenPrinters();}));pr.DropDownItems.Add(new ToolStripSeparator());pr.DropDownItems.Add(MenuItem("&Mis impresoras y búsqueda…",null,()=>OpenPrinters()));pr.DropDownItems.Add(MenuItem("Conectar &DYMO por Bluetooth…",null,()=>ConnectDymo()));pr.DropDownItems.Add(MenuItem("Impresora para &papel…",null,()=>{PaperPrinting.Select(this,label);UpdatePrinterBanner();}));menu.Items.Add(pr);
+#endif
+
    var help=new ToolStripMenuItem("A&yuda");help.DropDownItems.Add(MenuItem("&Guía rápida","F1",()=>Help()));help.DropDownItems.Add(MenuItem("Buscar &actualizaciones…",null,async()=>{if(Updates.Configure(this))await CheckUpdates(false);}));help.DropDownItems.Add(new ToolStripSeparator());help.DropDownItems.Add(MenuItem("A&cerca de Impresorapp",null,()=>About()));menu.Items.Add(help);
    MainMenuStrip=menu;
    BackColor=Color.FromArgb(242,247,244);MinimumSize=new Size(1150,740);
@@ -168,7 +182,11 @@ namespace EtiquetaLocal {
    var tools=new FlowLayoutPanel{Dock=DockStyle.Left,Width=258,Padding=new Padding(10),BackColor=Color.FromArgb(242,247,244),FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true};
    var sizeTools=Ui.Section(tools,"1. Tamaño de la etiqueta");
    sizeTools.Controls.Add(Ui.Hint("Incluye rollos de etiquetas, cinta DYMO y papel A4 / A3."));
-   presets.DropDownStyle=ComboBoxStyle.DropDownList;presets.Width=218;presets.DropDownWidth=380;presets.Items.AddRange(Formats.All.Cast<object>().ToArray());presets.SelectedIndex=0;sizeTools.Controls.Add(presets);
+   presets.DropDownStyle=ComboBoxStyle.DropDownList;presets.Width=218;presets.DropDownWidth=380;presets.Items.AddRange(Formats.All
+#if SENCILLA
+.Where(x=>!x.Dymo)
+#endif
+.Cast<object>().ToArray());presets.SelectedIndex=0;sizeTools.Controls.Add(presets);
    foreach(var n in new[]{width,height}){n.Minimum=5;n.Maximum=1000;n.DecimalPlaces=1;n.Width=95;}width.Value=100;height.Value=50;
    var measures=new FlowLayoutPanel{Width=222,Height=52,Margin=new Padding(0,8,0,4)};
    foreach(var pair in new[]{new{Title="Ancho (mm)",Input=width},new{Title="Alto (mm)",Input=height}}){var col=new FlowLayoutPanel{Width=104,Height=60,FlowDirection=FlowDirection.TopDown,Margin=new Padding(0,0,5,0)};col.Controls.Add(new System.Windows.Forms.Label{Text=pair.Title,AutoSize=true});col.Controls.Add(pair.Input);measures.Controls.Add(col);}sizeTools.Controls.Add(measures);
@@ -226,9 +244,10 @@ namespace EtiquetaLocal {
     if(selected.Kind=="Texto"&&new[]{"FontName","FontSize","Bold","Italic","Underline","TextAlign","Text"}.Contains(descriptor.Name))Editing.FitText(selected,label);Model.Validate(label);undo.Push(previous);RefreshAll();Mark();
    }catch(Exception ex){if(previous!=null){label=Model.Load(previous);canvas.Selected=index>=0?label.Elements[index]:null;RefreshAll();}MessageBox.Show(ex.Message,"Revisa el dato");}};
 
-   FormClosing+=(s,e)=>{if(!Confirm())e.Cancel=true;};KeyPreview=true;KeyDown+=(s,e)=>{if(e.Control&&e.KeyCode==Keys.N){New();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.O){Open();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.P){Print();e.SuppressKeyPress=true;}if(e.KeyCode==Keys.F1){Help();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.S){Save(false);e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.Z&&!props.ContainsFocus){Undo();e.SuppressKeyPress=true;}if(e.KeyCode==Keys.Delete&&!props.ContainsFocus){Delete();e.SuppressKeyPress=true;}};
-   Activated+=(s,e)=>UpdatePrinterBanner();PaperPrinting.SelectionChanged+=UpdatePrinterBanner;FormClosed+=(s,e)=>PaperPrinting.SelectionChanged-=UpdatePrinterBanner;
+   FormClosing+=(s,e)=>{if(!Confirm())e.Cancel=true;};KeyPreview=true;KeyDown+=(s,e)=>{if(HandleExtraKeys(e)){e.Handled=true;e.SuppressKeyPress=true;return;}if(e.Control&&e.KeyCode==Keys.N){New();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.O){Open();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.P){if(e.Shift)PrintOptions();else Print();e.SuppressKeyPress=true;}if(e.KeyCode==Keys.F1){Help();e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.S){Save(false);e.SuppressKeyPress=true;}if(e.Control&&e.KeyCode==Keys.Z&&!props.ContainsFocus){Undo();e.SuppressKeyPress=true;}if(e.KeyCode==Keys.Delete&&!props.ContainsFocus){Delete();e.SuppressKeyPress=true;}};
+   DriverPrinting.SelectionChanged+=UpdatePrinterBanner;FormClosed+=(s,e)=>DriverPrinting.SelectionChanged-=UpdatePrinterBanner;Activated+=(s,e)=>UpdatePrinterBanner();PaperPrinting.SelectionChanged+=UpdatePrinterBanner;FormClosed+=(s,e)=>PaperPrinting.SelectionChanged-=UpdatePrinterBanner;
    Shown+=async(s,e)=>{if(!Environment.GetCommandLineArgs().Contains("--render-ui"))await CheckUpdates(true);};
+   InitExtras();
    RefreshAll();
   }
   public void RenderPreview(string path){label=new Label();label.Elements.Add(new Element{Text="AZOR AMBIENTAL",X=6,Y=5,W=88,H=10,FontSize=20,Bold=true});label.Elements.Add(new Element{Text="Identificación de muestras · Laboratorio",X=6,Y=16,W=88,H=7,FontSize=10});label.Elements.Add(new Element{Kind="Código 39",Text="AZOR001",X=6,Y=25,W=88,H=15});label.Elements.Add(new Element{Text="AZOR001",X=6,Y=41,W=70,H=7,FontSize=10});canvas.Selected=label.Elements[0];RefreshAll();Show();Application.DoEvents();SyncFormatting();PerformLayout();using(var b=new Bitmap(Width,Height)){DrawToBitmap(b,new Rectangle(0,0,Width,Height));b.Save(path);}foreach(var tabs in Controls.OfType<TabControl>()){for(int i=1;i<tabs.TabCount;i++){tabs.SelectedIndex=i;Application.DoEvents();using(var b=new Bitmap(Width,Height)){DrawToBitmap(b,new Rectangle(0,0,Width,Height));b.Save(Path.Combine(Path.GetDirectoryName(path),"vista_"+tabs.TabPages[i].Text+".png"));}}}}
@@ -246,15 +265,20 @@ namespace EtiquetaLocal {
    if(label.Elements.Count>0&&MessageBox.Show("¿Sustituir el diseño por un ejemplo editable de este tamaño? Puedes recuperar el anterior con Deshacer.","Cargar ejemplo",MessageBoxButtons.OKCancel)!=DialogResult.OK)return;
    Snapshot();label=Formats.Example(label);FitDymoExample();canvas.Selected=label.Elements.FirstOrDefault();RefreshAll();Mark();exampleState=Model.Save(label);
   }
-  void Snapshot(){undo.Push(Model.Save(label));if(undo.Count>60)undo=new Stack<string>(undo.Take(60).Reverse());}
-  void Undo(){if(undo.Count==0)return;label=Model.Load(undo.Pop());canvas.Selected=null;RefreshAll();Mark();}
-  void Mark(){dirty=true;Text="Impresorapp "+AppVersion.Text+" · "+(String.IsNullOrEmpty(file)?"Sin título":Path.GetFileName(file))+" *";UpdateStatus();}
+  void Snapshot(){redo.Clear();undo.Push(Model.Save(label));if(undo.Count>60)undo=new Stack<string>(undo.Take(60).Reverse());}
+  void Undo(){if(undo.Count==0)return;redo.Push(Model.Save(label));label=Model.Load(undo.Pop());canvas.Selected=null;RefreshAll();Mark();}
+  void Mark(){dirty=true;Text=AppVersion.Name+" "+AppVersion.Text+" · "+(String.IsNullOrEmpty(file)?"Sin título":Path.GetFileName(file))+" *";UpdateStatus();}
   void ShowDymoSelection(){if(dymoPanel==null){dymoPanel=new LetraTagPanel(BuildDymoDesign);dymoPanel.SelectionChanged+=UpdatePrinterBanner;canvasHost.Controls.Add(dymoPanel);canvas.BringToFront();canvasHost.PerformLayout();}var saved=DymoStore.Load();if(saved!=null&&!dymoPanel.HasSelection)dymoPanel.UseDevice(saved);dymoPanel.Visible=true;UpdatePrinterBanner();}
   ToolStripMenuItem MenuItem(string text,string keys,Action action){var item=new ToolStripMenuItem(text,null,(s,e)=>action());if(keys!=null)item.ShortcutKeyDisplayString=keys;return item;}
   void UpdatePrinterBanner(){try{
    if(label.Media!="DYMO LT12"&&dymoPanel!=null&&dymoPanel.Visible)dymoPanel.Visible=false;
    if(label.Media=="PAPER"){printerChip.Kind="print";printerChip.Caption="Imprimir en papel";printerChip.Value=PaperPrinting.CurrentName;chipTip.SetToolTip(printerChip,"Impresora de Windows para papel. Pulsa para cambiarla.");return;}
    if(label.Media=="DYMO LT12"){printerChip.Kind="bluetooth";printerChip.Caption="Imprimir en";var saved=DymoStore.Load();string name=dymoPanel!=null&&dymoPanel.HasSelection?dymoPanel.SelectedDevice.Name:saved!=null?saved.Name:null;printerChip.Value=name==null?"DYMO sin conectar":name+" · por Bluetooth";chipTip.SetToolTip(printerChip,"DYMO LetraTag por Bluetooth. Pulsa para conectar otra.");return;}
+   var driver=DriverPrinting.Load();
+#if SENCILLA
+if(!driver.Enabled){printerChip.Kind="print";printerChip.Caption="Imprimir en";printerChip.Value="Elige una impresora de Windows";chipTip.SetToolTip(printerChip,"Pulsa para elegir una de las impresoras instaladas en Windows.");return;}
+#endif
+if(driver.Enabled){printerChip.Kind="print";printerChip.Caption="Imprimir con controlador";printerChip.Value=driver.Printer;chipTip.SetToolTip(printerChip,driver.Printer+" · controlador de Windows / servidor · Pulsa para cambiar");return;}
    printerChip.Kind="network";printerChip.Caption="Imprimir en";var p=SavedPrinters.Load().Preferred;
    if(p==null){printerChip.Value="Sin impresora · Pulsa para elegir";chipTip.SetToolTip(printerChip,"Elige una impresora de etiquetas en Mis impresoras.");return;}
    printerChip.Value=p.Alias+(String.IsNullOrWhiteSpace(p.Location)?"":" · "+p.Location)+(p.Connection=="LAN"?" · por red":" · USB (pendiente)");
@@ -267,11 +291,19 @@ namespace EtiquetaLocal {
   void WidenPropertyNames(){try{var view=typeof(PropertyGrid).GetField("gridView",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).GetValue(props);view.GetType().GetMethod("MoveSplitterTo",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(view,new object[]{Math.Max(110,props.Width-125)});}catch{}}
   // En cinta DYMO, el ejemplo usa el mismo tamaño de letra que los textos nuevos y queda centrado.
   void FitDymoExample(){if(label.Media!="DYMO LT12")return;var backup=Model.Save(label);try{foreach(var el in label.Elements){if(el.Kind=="Texto"){el.FontSize=Editing.DymoFontSize();Editing.FitText(el,label);}else Editing.CenterOnTape(el,label);}if(Editing.MarginProblem(label)!=null)label=Model.Load(backup);}catch{label=Model.Load(backup);}}
-  void ChoosePrinter(){if(label.Media=="PAPER"){PaperPrinting.Select(this,label);UpdatePrinterBanner();return;}OpenPrinters();}
-  void About(){MessageBox.Show(this,"Impresorapp "+AppVersion.Text+"\n\nEditor de etiquetas y carteles para Windows.\nAutor: Alberto Marín (albertuxo85).\nFirmado digitalmente por Azor Ambiental Holdco S.L.U.\n\nhttps://github.com/albertuxo085/Impresorapp","Acerca de Impresorapp");}
+  void ChoosePrinter(){
+#if SENCILLA
+if(label.Media!="PAPER"){DriverPrinting.Select(this,label);UpdatePrinterBanner();return;}
+#endif
+if(label.Media!="PAPER"&&label.Media!="DYMO LT12"&&DriverPrinting.Load().Enabled){DriverPrinting.Select(this,label);UpdatePrinterBanner();return;}if(label.Media=="PAPER"){PaperPrinting.Select(this,label);UpdatePrinterBanner();return;}OpenPrinters();}
+  void About(){MessageBox.Show(this,AppVersion.Name+" "+AppVersion.Text+"\n\nEditor de etiquetas y carteles para Windows.\nAutor: Alberto Marín (albertuxo85).\nhttps://github.com/albertuxo085/Impresorapp","Acerca de Impresorapp");}
   // Cambia el diseño a cinta DYMO con el largo indicado.
   void SwitchToDymo(decimal length){var custom=Formats.All.Last(x=>x.Dymo&&x.W==0);syncing=true;presets.SelectedItem=custom;syncing=false;width.Value=Math.Max(25,Math.Min(200,length));height.Value=12;ApplySize();ShowDymoSelection();}
-  void ConnectDymo(){decimal current=label.Media=="DYMO LT12"?(decimal)label.Width:60;using(var d=new DymoConnectForm(current)){if(d.ShowDialog(this)!=DialogResult.OK||d.Device==null)return;try{DymoStore.Save(d.Device);}catch(Exception ex){MessageBox.Show(this,"No se pudo guardar la DYMO en este equipo: "+ex.Message,"DYMO");}if(dymoPanel!=null)dymoPanel.UseDevice(d.Device);SwitchToDymo(d.LabelLength);if(dymoPanel!=null)dymoPanel.UseDevice(d.Device);UpdatePrinterBanner();}}
+  void ConnectDymo(){
+#if SENCILLA
+MessageBox.Show(this,"Impresorapp Sencilla imprime solo en las impresoras instaladas en Windows. Para la DYMO LetraTag por Bluetooth usa Impresorapp completa.","Impresorapp Sencilla");return;
+#endif
+decimal current=label.Media=="DYMO LT12"?(decimal)label.Width:60;using(var d=new DymoConnectForm(current)){if(d.ShowDialog(this)!=DialogResult.OK||d.Device==null)return;try{DymoStore.Save(d.Device);}catch(Exception ex){MessageBox.Show(this,"No se pudo guardar la DYMO en este equipo: "+ex.Message,"DYMO");}if(dymoPanel!=null)dymoPanel.UseDevice(d.Device);SwitchToDymo(d.LabelLength);if(dymoPanel!=null)dymoPanel.UseDevice(d.Device);UpdatePrinterBanner();}}
   // Al pasar de la DYMO a una impresora de rollo, ofrece cambiar el formato en vez de dar error.
   void OfferRollFormat(){if(label.Media!="DYMO LT12")return;if(MessageBox.Show(this,"La impresora elegida usa etiquetas de rollo y el diseño actual es una cinta DYMO de 12 mm.\n\n¿Cambiar a un formato de rollo de 100 × 50 mm?","Cambiar formato",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;var roll=Formats.All.FirstOrDefault(x=>!x.Dymo&&!x.Paper&&x.W==100&&x.H==50);if(roll!=null)presets.SelectedItem=roll;}
 
@@ -289,7 +321,7 @@ namespace EtiquetaLocal {
    if(dymo)Editing.CenterOnTape(el,label);
    Snapshot();label.Elements.Add(el);canvas.Selected=el;RefreshAll();Mark();if(kind=="Texto")EditText();
   }
-  void SyncFormatting(){formatSync=true;var e=canvas.Selected;bool text=e!=null&&e.Kind=="Texto";fontSelector.Enabled=fontPoints.Enabled=boldToggle.Enabled=italicToggle.Enabled=underlineToggle.Enabled=alignment.Enabled=text;if(text){string family=String.IsNullOrEmpty(e.FontName)?"Arial":e.FontName;if(!fontSelector.Items.Contains(family))fontSelector.Items.Add(family);fontSelector.SelectedItem=family;fontPoints.Value=(decimal)Math.Max(1,Math.Min(300,e.FontSize));boldToggle.Checked=e.Bold;italicToggle.Checked=e.Italic;underlineToggle.Checked=e.Underline;alignment.SelectedItem=String.IsNullOrEmpty(e.TextAlign)?"Izquierda":e.TextAlign;}aspectToggle.Enabled=e!=null&&e.Kind=="Imagen";aspectToggle.Checked=aspectToggle.Enabled&&e.LockAspect;foreach(var b in selectionButtons)b.Enabled=e!=null;if(editButton!=null)editButton.Enabled=e!=null&&(e.Kind=="Texto"||e.Kind=="Código 39"||e.Kind=="QR");if(imageGroup!=null)imageGroup.Visible=e!=null&&e.Kind=="Imagen";formatSync=false;}
+  void SyncFormatting(){formatSync=true;var e=canvas.Selected;bool text=e!=null&&e.Kind=="Texto";fontSelector.Enabled=fontPoints.Enabled=boldToggle.Enabled=italicToggle.Enabled=underlineToggle.Enabled=alignment.Enabled=text;if(text){string family=String.IsNullOrEmpty(e.FontName)?"Arial":e.FontName;if(!fontSelector.Items.Contains(family))fontSelector.Items.Add(family);fontSelector.SelectedItem=family;fontPoints.Value=(decimal)Math.Max(1,Math.Min(300,e.FontSize));boldToggle.Checked=e.Bold;italicToggle.Checked=e.Italic;underlineToggle.Checked=e.Underline;alignment.SelectedItem=String.IsNullOrEmpty(e.TextAlign)?"Izquierda":e.TextAlign;}aspectToggle.Enabled=e!=null&&e.Kind=="Imagen";aspectToggle.Checked=aspectToggle.Enabled&&e.LockAspect;foreach(var b in selectionButtons)b.Enabled=e!=null;if(editButton!=null)editButton.Enabled=e!=null&&(e.Kind=="Texto"||e.Kind=="Código 39"||e.Kind=="QR");if(imageGroup!=null)imageGroup.Visible=e!=null&&e.Kind=="Imagen";SyncRibbon(e);formatSync=false;}
   void ApplyTypography(){if(formatSync||canvas.Selected==null||canvas.Selected.Kind!="Texto")return;Snapshot();var e=canvas.Selected;e.FontName=fontSelector.SelectedItem as string??"Arial";e.FontSize=(float)fontPoints.Value;e.Bold=boldToggle.Checked;e.Italic=italicToggle.Checked;e.Underline=underlineToggle.Checked;Editing.FitText(e,label);RefreshAll();Mark();}
   void AddEmoji(){string symbol=Editing.PickEmoji(this);if(symbol==null)return;Snapshot();bool dymo=label.Media=="DYMO LT12";var e=new Element{Kind="Texto",Text=symbol,FontName="Segoe UI Emoji",FontSize=dymo?Editing.DymoFontSize():20,X=2,Y=2};Editing.FitText(e,label);if(dymo)Editing.PlaceAfterOthers(e,label);label.Elements.Add(e);canvas.Selected=e;RefreshAll();Mark();}
   void CenterElement(bool horizontal){if(canvas.Selected==null)return;Snapshot();var e=canvas.Selected;if(horizontal)e.X=Math.Max(0,(label.Width-e.W)/2);else e.Y=Math.Max(0,(label.Height-e.H)/2);RefreshAll();Mark();}
@@ -309,18 +341,57 @@ namespace EtiquetaLocal {
   void Duplicate(){if(canvas.Selected==null||label.Elements.Count>=500)return;Snapshot();var copy=Model.Load(Model.Save(new Label{Elements=new List<Element>{canvas.Selected}})).Elements[0];copy.X+=2;copy.Y+=2;label.Elements.Add(copy);canvas.Selected=copy;RefreshAll();Mark();}
   void Delete(){if(canvas.Selected==null)return;Snapshot();label.Elements.Remove(canvas.Selected);canvas.Selected=null;RefreshAll();Mark();}
   bool Confirm(){if(!dirty)return true;var r=MessageBox.Show("¿Guardar los cambios de la etiqueta?","Cambios pendientes",MessageBoxButtons.YesNoCancel);if(r==DialogResult.Cancel)return false;if(r==DialogResult.Yes)return Save(false);return true;}
-  void New(){if(!Confirm())return;welcomeDone=true;label=new Label();file="";dirty=false;undo.Clear();canvas.Selected=null;Text="Impresorapp "+AppVersion.Text+" · Sin título";RefreshAll();}
-  void Open(){if(!Confirm())return;using(var d=new OpenFileDialog{Filter="Diseños Impresorapp|*.etiqueta"}){if(d.ShowDialog()!=DialogResult.OK)return;try{if(new FileInfo(d.FileName).Length>30000000)throw new Exception("La plantilla supera 30 MB.");label=Model.Load(File.ReadAllText(d.FileName,Encoding.UTF8));file=d.FileName;dirty=false;undo.Clear();canvas.Selected=null;Text="Impresorapp "+AppVersion.Text+" · "+Path.GetFileName(file);RefreshAll();}catch(Exception ex){MessageBox.Show(ex.Message,"No se pudo abrir");}}}
-  bool Save(bool asNew){try{Model.Validate(label);string folder;try{folder=DesignStorage.EnsureDefaultFolder();}catch(Exception ex){MessageBox.Show(this,"No se pudo crear la carpeta de diseños. Puedes elegir otra ubicación.\n"+ex.Message,"Carpeta de diseños");folder=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);}using(var d=new SaveFileDialog{Title="Guardar diseño · Impresorapp",InitialDirectory=folder,RestoreDirectory=true,Filter="Diseños de etiquetas y carteles|*.etiqueta",DefaultExt="etiqueta",AddExtension=true,OverwritePrompt=true,FileName=String.IsNullOrEmpty(file)?"Mi diseño.etiqueta":Path.GetFileName(file)}){if(d.ShowDialog(this)!=DialogResult.OK)return false;DesignStorage.Write(d.FileName,Model.Save(label));file=d.FileName;}dirty=false;Text="Impresorapp "+AppVersion.Text+" · "+Path.GetFileName(file);return true;}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo guardar");return false;}}
+  void New(){if(!Confirm())return;welcomeDone=true;label=new Label();file="";dirty=false;undo.Clear();canvas.Selected=null;Text=AppVersion.Name+" "+AppVersion.Text+" · Sin título";RefreshAll();}
+  void Open(){if(!Confirm())return;using(var d=new OpenFileDialog{Filter="Diseños Impresorapp|*.etiqueta"}){if(d.ShowDialog()!=DialogResult.OK)return;try{if(new FileInfo(d.FileName).Length>30000000)throw new Exception("La plantilla supera 30 MB.");label=Model.Load(File.ReadAllText(d.FileName,Encoding.UTF8));file=d.FileName;dirty=false;undo.Clear();canvas.Selected=null;Text=AppVersion.Name+" "+AppVersion.Text+" · "+Path.GetFileName(file);RefreshAll();}catch(Exception ex){MessageBox.Show(ex.Message,"No se pudo abrir");}}}
+  bool Save(bool asNew){try{Model.Validate(label);string folder;try{folder=DesignStorage.EnsureDefaultFolder();}catch(Exception ex){MessageBox.Show(this,"No se pudo crear la carpeta de diseños. Puedes elegir otra ubicación.\n"+ex.Message,"Carpeta de diseños");folder=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);}using(var d=new SaveFileDialog{Title="Guardar diseño · Impresorapp",InitialDirectory=folder,RestoreDirectory=true,Filter="Diseños de etiquetas y carteles|*.etiqueta",DefaultExt="etiqueta",AddExtension=true,OverwritePrompt=true,FileName=String.IsNullOrEmpty(file)?"Mi diseño.etiqueta":Path.GetFileName(file)}){if(d.ShowDialog(this)!=DialogResult.OK)return false;DesignStorage.Write(d.FileName,Model.Save(label));file=d.FileName;}dirty=false;Text=AppVersion.Name+" "+AppVersion.Text+" · "+Path.GetFileName(file);return true;}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo guardar");return false;}}
   bool checkingUpdates;
-  async Task CheckUpdates(bool automatic){if(checkingUpdates)return;checkingUpdates=true;try{string exe=await Updates.Check(this,automatic);if(exe==null||IsDisposed)return;if(MessageBox.Show(this,"La versión nueva está lista. ¿Guardar los cambios pendientes y abrirla ahora?","Actualizar Impresorapp",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;if(!Confirm())return;Updates.Launch(exe);dirty=false;Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo abrir la actualización");}finally{checkingUpdates=false;}}
+  async Task CheckUpdates(bool automatic){
+#if SENCILLA
+if(automatic)return;MessageBox.Show(this,"Impresorapp Sencilla se actualiza instalando la versión nueva de Impresorapp Sencilla.","Actualizaciones");return;
+#endif
+if(checkingUpdates)return;checkingUpdates=true;try{string exe=await Updates.Check(this,automatic);if(exe==null||IsDisposed)return;if(MessageBox.Show(this,"La versión nueva está lista. ¿Guardar los cambios pendientes y abrirla ahora?","Actualizar Impresorapp",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;if(!Confirm())return;Updates.Launch(exe);dirty=false;Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo abrir la actualización");}finally{checkingUpdates=false;}}
   Bitmap BuildDymoDesign(){Model.Validate(label);if(label.Media!="DYMO LT12")throw new Exception("Elige un formato DYMO LT en la columna Formato de etiqueta.");if(label.Elements.Count==0)throw new Exception("Añade texto, imágenes u otros elementos desde el editor.");string problem=Editing.MarginProblem(label);if(problem!=null)throw new Exception(problem);if(label.Width<25||label.Width>200||label.Height!=12)throw new Exception("La LetraTag usa cinta de 12 mm y longitudes de 25 a 200 mm.");int dots=(int)Math.Round(label.Width*200/25.4);var b=new Bitmap(dots+47,30);try{using(var g=Graphics.FromImage(b)){g.Clear(Color.White);g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;g.ScaleTransform(200f/25.4f,100f/25.4f);g.TranslateTransform(0,-2.2f);Render.Draw(g,label);}return b;}catch{b.Dispose();throw;}}
   async void LetraTag(){try{if(label.Media!="DYMO LT12"){ConnectDymo();return;}ShowDymoSelection();if(!dymoPanel.HasSelection)ConnectDymo();if(dymoPanel!=null&&dymoPanel.HasSelection)await dymoPanel.PrintCurrent();}catch(Exception ex){MessageBox.Show(ex.Message,"DYMO");}}
 
-  void OpenPrinters(){string choice;using(var d=new Discovery()){d.ShowDialog(this);choice=d.Choice;}if(choice=="dymo-connect")ConnectDymo();else if(choice=="dymo-use"){var saved=DymoStore.Load();if(saved==null)ConnectDymo();else{SwitchToDymo(label.Media=="DYMO LT12"?(decimal)label.Width:60);if(dymoPanel!=null)dymoPanel.UseDevice(saved);}}else if(choice=="printer")OfferRollFormat();UpdatePrinterBanner();}
+  void OpenPrinters(){
+#if SENCILLA
+DriverPrinting.Select(this,label);UpdatePrinterBanner();return;
+#endif
+string choice;using(var d=new Discovery()){d.ShowDialog(this);choice=d.Choice;}if(choice=="dymo-connect")ConnectDymo();else if(choice=="dymo-use"){var saved=DymoStore.Load();if(saved==null)ConnectDymo();else{SwitchToDymo(label.Media=="DYMO LT12"?(decimal)label.Width:60);if(dymoPanel!=null)dymoPanel.UseDevice(saved);}}else if(choice=="printer"){DriverPrinting.UseDirect();OfferRollFormat();}UpdatePrinterBanner();}
+  void PrintWindows(){if(!DriverPrinting.Load().Enabled){DriverPrinting.Select(this,label);UpdatePrinterBanner();if(!DriverPrinting.Load().Enabled)return;}PrintDriver();}
+  // Imprimir: envía directamente a la impresora con controlador guardada, sin vista previa.
+  void PrintDriver(){try{if(!CheckInside())return;DriverPrinting.PrintNow(this,label);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir con controlador");}}
+  // Comprueba que nada quede fuera; si algo queda fuera, lo selecciona y lo explica.
+  bool CheckInside(){if(label.Elements.Count==0){MessageBox.Show(this,"Añade algún elemento antes de imprimir.","Imprimir");return false;}var outside=FirstOutside();if(outside==null)return true;canvas.Selected=outside;RefreshAll();MessageBox.Show(this,"«"+outside.Kind+" · "+(outside.Text??"")+"» queda fuera de la etiqueta (al menos una parte de lo que se imprime).\n\nLo he seleccionado. Arrástralo dentro de la etiqueta o elimínalo, y vuelve a pulsar Imprimir.","Imprimir");return false;}
+  // Vista previa y opciones: la ventana completa (impresora, copias, preferencias y vista previa).
+  void PrintOptions(){
+#if SENCILLA
+   if(label.Media!="PAPER"){if(!DriverPrinting.Load().Enabled){DriverPrinting.Select(this,label);UpdatePrinterBanner();if(!DriverPrinting.Load().Enabled)return;}try{if(CheckInside())DriverPrinting.Show(this,label);}catch(Exception ex){MessageBox.Show(this,ex.Message,"Vista previa y opciones");}UpdatePrinterBanner();return;}
+#endif
+   if(label.Media=="PAPER"){PrintPaper();return;}
+   if(label.Media=="DYMO LT12"){ShowDymoSelection();return;}
+   if(DriverPrinting.Load().Enabled){try{if(CheckInside())DriverPrinting.Show(this,label);}catch(Exception ex){MessageBox.Show(this,ex.Message,"Vista previa y opciones");}UpdatePrinterBanner();return;}
+   try{Model.Validate(label);if(!CheckInside())return;using(var f=new DirectPrintForm(label,"",SavedPrinters.Load().Preferred))f.ShowDialog(this);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Vista previa y opciones");}
+  }
+  // Envío ZPL directo a la impresora de red guardada (1 copia), sin abrir la ventana de envío.
+  async void QuickZpl(SavedPrinter p){try{
+    if(label.Width>(float)p.MaxWidth)throw new Exception("La etiqueta ("+label.Width+" mm) supera el ancho imprimible de "+p.Alias+" ("+p.MaxWidth+" mm).");
+    if(p.Profile==1&&(label.Width<25.4f||label.Height<7.8f||label.Height>995))throw new Exception("El perfil Toshiba B-FV4D-GS admite anchos desde 25,4 mm y largos de 7,8 a 995 mm.");
+    var payload=Direct.Build(label,p.Dots,1);status.Text="Enviando a "+p.Alias+"…";Cursor=Cursors.WaitCursor;
+    await Task.Run(()=>Direct.Send(p.Address,p.Port,payload));
+    status.Text="Etiqueta enviada a "+p.Alias+". Comprueba la salida de la impresora.";
+   }catch(Exception ex){status.Text="No se ha confirmado el envío a "+p.Alias+".";
+    if(MessageBox.Show(this,ex.GetBaseException().Message+"\n\nSi hubo un envío parcial, revisa la impresora antes de repetir.\n\n¿Abrir «Vista previa y opciones» (incluye imprimir con el controlador de Windows)?","Imprimir",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)PrintOptions();
+   }finally{Cursor=Cursors.Default;}}
   void PrintPaper(){try{PaperPrinting.Show(this,label);}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir en papel");}}
-  void Print(){if(label.Media=="PAPER"){PrintPaper();return;}if(label.Media=="DYMO LT12"){LetraTag();return;}try{Model.Validate(label);if(label.Elements.Count==0)throw new Exception("Añade algún elemento antes de imprimir.");var outside=FirstOutside();if(outside!=null){canvas.Selected=outside;RefreshAll();throw new Exception("«"+outside.Kind+" · "+(outside.Text??"")+"» queda fuera de la etiqueta (al menos una parte de lo que se imprime).\n\nLo he seleccionado en «Elementos del diseño». Arrástralo dentro de la etiqueta o elimínalo, y vuelve a pulsar Imprimir.");}
-   var preferred=SavedPrinters.Load().Preferred;if(preferred!=null&&preferred.NoZpl){DriverHelp.Offer(this,preferred,PrintPaper);return;}
+  void Print(){
+#if SENCILLA
+if(label.Media!="PAPER"){PrintWindows();return;}
+#endif
+if(label.Media=="PAPER"){PrintPaper();return;}if(label.Media=="DYMO LT12"){LetraTag();return;}if(DriverPrinting.Load().Enabled){PrintDriver();return;}try{Model.Validate(label);if(label.Elements.Count==0)throw new Exception("Añade algún elemento antes de imprimir.");var outside=FirstOutside();if(outside!=null){canvas.Selected=outside;RefreshAll();throw new Exception("«"+outside.Kind+" · "+(outside.Text??"")+"» queda fuera de la etiqueta (al menos una parte de lo que se imprime).\n\nLo he seleccionado en «Elementos del diseño». Arrástralo dentro de la etiqueta o elimínalo, y vuelve a pulsar Imprimir.");}
+   var preferred=SavedPrinters.Load().Preferred;if(preferred!=null&&preferred.NoZpl){DriverHelp.Offer(this,preferred,PrintDriver);return;}
+   // Impresora de red ya comprobada: se envía directamente. Si aún no está configurada, se abre la ventana de envío una vez.
+   if(preferred!=null&&preferred.Connection=="LAN"&&preferred.Configured){QuickZpl(preferred);return;}
    using(var f=new DirectPrintForm(label,"",preferred))f.ShowDialog(this);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Impresión directa");}}
   // Primer elemento cuyo contenido impreso queda fuera de la etiqueta.
   Element FirstOutside(){foreach(var e in label.Elements){var single=new Label{Media=label.Media,Width=label.Width,Height=label.Height};single.Elements.Add(e);if(Editing.MarginProblem(single)!=null)return e;}return null;}
@@ -392,7 +463,7 @@ namespace EtiquetaLocal {
    Assert(Network.Range("192.168.1.1","192.168.1.254").Count==254,"IPv4 range");bool rejected=false;try{Network.Range("192.168.1.1","192.168.2.1");}catch{rejected=true;}Assert(rejected,"Cross block rejected");
    rejected=false;try{Barcode.Check("abc*");}catch{rejected=true;}Assert(rejected,"Invalid barcode");Barcode.Check("AZOR-001");
    l.Elements.Add(new Element{Kind="Código 39",Text="AZOR001",X=2,Y=20,W=80,H=15});using(var bitmap=new Bitmap(800,400))using(var g=Graphics.FromImage(bitmap)){g.Clear(Color.White);g.ScaleTransform(8,8);Render.Draw(g,l);bitmap.Save(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"prueba_render.png"));}
-   DesignStorage.SelfTest();DymoStore.SelfTest();Updates.SelfTest();QrSupport.SelfTest();SmartGuides.SelfTest();DesignerVerification.Run();SavedPrinters.SelfTest();UsbPrinters.SelfTest();AppPreferences.SelfTest();Formats.SelfTest();DirectTests.Run();LTProtocol.SelfTest();Editing.SelfTest();PrinterDiscovery.SelfTest();
+   DriverPrinting.SelfTest();DesignStorage.SelfTest();DymoStore.SelfTest();AzorCatalog.SelfTest();Updates.SelfTest();QrSupport.SelfTest();SmartGuides.SelfTest();DesignerVerification.Run();ImageToolsVerification.Run();SavedPrinters.SelfTest();UsbPrinters.SelfTest();AppPreferences.SelfTest();Formats.SelfTest();DirectTests.Run();LTProtocol.SelfTest();Editing.SelfTest();PrinterDiscovery.SelfTest();
    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"comprobaciones.txt"),"OK: guardado/carga UTF-8, límites, rango IPv4, validación Code39, renderizado, mapa monocromo y segmentos ZPL. LetraTag: orden de bits, checksum, fragmentación y reconstrucción comprobados. Pruebas TCP/Bluetooth físicas pendientes. No se ha ejecutado barrido de red ni impresión física.");
   }
  }
