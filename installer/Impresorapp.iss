@@ -7,18 +7,27 @@
 #ifndef OutputDir
   #error OutputDir is required
 #endif
+#ifdef Sencilla
+  #define AppTitle "Impresorapp Sencilla"
+  #define ExeBase "Impresorapp-Sencilla"
+  #define AppGuid "{{2827E452-0B95-4ABB-A6CA-021AAB739AFF}"
+#else
+  #define AppTitle "Impresorapp"
+  #define ExeBase "Impresorapp"
+  #define AppGuid "{{AD41149D-8878-4B28-9D55-906BB703CA95}"
+#endif
 #define AppAuthor "Alberto Marín (albertuxo85)"
 [Setup]
-AppId={{AD41149D-8878-4B28-9D55-906BB703CA95}
-AppName=Impresorapp
+AppId={#AppGuid}
+AppName={#AppTitle}
 AppVersion={#AppVersion}
-AppVerName=Impresorapp {#AppVersion}
+AppVerName={#AppTitle} {#AppVersion}
 AppPublisher={#AppAuthor}
 AppPublisherURL=https://github.com/albertuxo085/Impresorapp
 AppSupportURL=https://github.com/albertuxo085/Impresorapp/issues
 AppUpdatesURL=https://github.com/albertuxo085/Impresorapp/releases
-DefaultDirName={localappdata}\Programs\Impresorapp
-DefaultGroupName=Impresorapp
+DefaultDirName={localappdata}\Programs\{#ExeBase}
+DefaultGroupName={#AppTitle}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -29,12 +38,12 @@ DisableWelcomePage=no
 SetupIconFile={#InputDir}\Impresorapp.ico
 UninstallDisplayIcon={app}\Impresorapp.exe
 OutputDir={#OutputDir}
-OutputBaseFilename=Impresorapp-{#AppVersion}-Setup
+OutputBaseFilename={#ExeBase}-{#AppVersion}-Setup
 Compression=lzma2
 SolidCompression=yes
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#AppAuthor}
-VersionInfoDescription=Instalador de Impresorapp
+VersionInfoDescription=Instalador de {#AppTitle}
 VersionInfoCopyright=Copyright (c) 2026 Alberto Marín
 CloseApplications=yes
 RestartApplications=no
@@ -45,14 +54,14 @@ UsePreviousAppDir=not SmokeTest
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Messages]
-spanish.WelcomeLabel2=Este asistente instalará Impresorapp {#AppVersion} en tu equipo.%n%nAutor: Alberto Marín (albertuxo85).%n%nTus diseños y preferencias se conservarán al desinstalar el programa.
+spanish.WelcomeLabel2=Este asistente instalará {#AppTitle} {#AppVersion} en tu equipo.%n%nAutor: Alberto Marín (albertuxo85).%n%nTus diseños y preferencias se conservarán al desinstalar el programa.
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; GroupDescription: "Accesos directos:"; Flags: unchecked; Check: not SmokeTest
 
 [Files]
-Source: "{#InputDir}\Impresorapp-{#AppVersion}.exe"; DestDir: "{app}"; DestName: "Impresorapp.exe"; Flags: ignoreversion
-Source: "{#InputDir}\Impresorapp-{#AppVersion}.exe.config"; DestDir: "{app}"; DestName: "Impresorapp.exe.config"; Flags: ignoreversion
+Source: "{#InputDir}\{#ExeBase}-{#AppVersion}.exe"; DestDir: "{app}"; DestName: "Impresorapp.exe"; Flags: ignoreversion
+Source: "{#InputDir}\{#ExeBase}-{#AppVersion}.exe.config"; DestDir: "{app}"; DestName: "Impresorapp.exe.config"; Flags: ignoreversion
 Source: "{#InputDir}\QRCoder.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#InputDir}\QRCoder-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#InputDir}\update-defaults.json"; DestDir: "{app}"; Flags: ignoreversion
@@ -61,11 +70,11 @@ Source: "{#InputDir}\LEEME.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#InputDir}\*.etiqueta"; DestDir: "{app}\Ejemplos"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Impresorapp"; Filename: "{app}\Impresorapp.exe"; WorkingDir: "{app}"; Check: not SmokeTest
-Name: "{autodesktop}\Impresorapp"; Filename: "{app}\Impresorapp.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: not SmokeTest
+Name: "{autoprograms}\{#AppTitle}"; Filename: "{app}\Impresorapp.exe"; WorkingDir: "{app}"; Check: not SmokeTest
+Name: "{autodesktop}\{#AppTitle}"; Filename: "{app}\Impresorapp.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: not SmokeTest
 
 [Run]
-Filename: "{app}\Impresorapp.exe"; Description: "Abrir Impresorapp"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Impresorapp.exe"; Description: "Abrir {#AppTitle}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function SmokeTest: Boolean;
