@@ -15,8 +15,31 @@ namespace EtiquetaLocal {
 
  // Catálogo de etiquetas de ejemplo pensadas para Azor Ambiental. Todas se pueden editar después.
  public static class AzorCatalog {
-  public static readonly string[] Categories={"Residuos peligrosos","Reciclaje y no peligrosos","Seguridad y avisos","Almacén y ubicaciones","Muestras y laboratorio","Inventario e informática","Mantenimiento y calibración","Contenedores y logística","Oficina y archivo"};
+  // Las pegatinas de 50 × 50 mm son las más usadas: van primero y el catálogo se abre en ellas.
+  public const string Stickers="Pegatinas 50 × 50 mm";
+  static readonly string[] Others={"Residuos peligrosos","Reciclaje y no peligrosos","Seguridad y avisos","Almacén y ubicaciones","Muestras y laboratorio","Inventario e informática","Mantenimiento y calibración","Contenedores y logística","Oficina y archivo"};
+  public static readonly string[] Categories=new[]{Stickers}.Concat(Others).ToArray();
   const string Emoji="Segoe UI Emoji";
+
+  // ---- Pegatinas de 50 × 50 mm ----
+  static Label Sticker(params Element[] e){return Make(50,50,e);}
+  // Residuo peligroso: título, pictograma, peligro, residuo, LER y fecha.
+  static Label Hazard50(string name,string ler,string symbol,string danger){
+   return Sticker(F(1,1,48,48,.8f),T("RESIDUO PELIGROSO",2,2,46,5.5f,10,true),Line(2,8,46,.4f),S(symbol,12,9.5f,26,16,30),T(danger,2,26,46,4.5f,7,true),
+    T(name,2,30.5f,46,5,8,true),T("LER "+ler,2,35.5f,46,4.5f,8),T("Azor Ambiental · __/__/____",2,41,46,4.5f,7));
+  }
+  // Reciclaje / no peligroso.
+  static Label Recycle50(string title,string ler,string symbol="♻"){
+   return Sticker(F(1,1,48,48,.8f),S(symbol,10,3,30,21,38),T(title,2,24.5f,46,10.5f,12,true),T("Residuo no peligroso · LER "+ler,2,36,46,4.5f,7),T("Azor Ambiental",2,41.5f,46,4.5f,8,true));
+  }
+  // Señal de seguridad.
+  static Label Sign50(string symbol,string title,string detail){
+   return Sticker(F(1,1,48,48,1.2f),F(2.6f,2.6f,44.8f,44.8f,.3f),S(symbol,10,4,30,21,38),T(title,3,25.5f,44,10.5f,11,true),T(detail,3,37,44,8.5f,7));
+  }
+  // Aviso con símbolo, título y dos líneas para rellenar.
+  static Label Notice50(string symbol,string title,string line1,string line2){
+   return Sticker(F(1,1,48,48,1.2f),S(symbol,12,3,26,18,32),T(title,2,21.5f,46,11,12,true),L(line1,4,34,42,4.5f,7.5f),L(line2,4,40,42,4.5f,7.5f));
+  }
 
   static Element T(string text,float x,float y,float w,float h,float pt,bool bold=false,string align="Centro"){return new Element{Kind="Texto",Text=text,X=x,Y=y,W=w,H=h,FontSize=pt,Bold=bold,TextAlign=align,FontName="Arial"};}
   static Element L(string text,float x,float y,float w,float h,float pt,bool bold=false){return T(text,x,y,w,h,pt,bold,"Izquierda");}
@@ -63,10 +86,50 @@ namespace EtiquetaLocal {
   }
 
   static readonly List<CatalogItem> items=new List<CatalogItem>();
-  static void Add(int category,string name,Func<Label> build){items.Add(new CatalogItem{Category=Categories[category],Name=name,Build=build});}
+  static void Add(int category,string name,Func<Label> build){items.Add(new CatalogItem{Category=Others[category],Name=name,Build=build});}
+  static void Add50(string name,Func<Label> build){items.Add(new CatalogItem{Category=Stickers,Name=name,Build=build});}
+  static void Fill50(){
+   // Residuos peligrosos. Códigos LER orientativos.
+   Add50("Residuo peligroso",()=>Hazard50("[Nombre del residuo]","[xx xx xx*]","⚠","PELIGRO"));
+   Add50("Aceite usado",()=>Hazard50("Aceite mineral usado","13 02 05*","🐟","MEDIO AMBIENTE"));
+   Add50("Envases contaminados",()=>Hazard50("Envases contaminados","15 01 10*","⚠","NOCIVO"));
+   Add50("Absorbentes contaminados",()=>Hazard50("Absorbentes y trapos","15 02 02*","🔥","INFLAMABLE"));
+   Add50("Baterías de plomo",()=>Hazard50("Baterías de plomo","16 06 01*","☠","TÓXICO · CORROSIVO"));
+   Add50("Fluorescentes",()=>Hazard50("Fluorescentes y lámparas","20 01 21*","☠","TÓXICO"));
+   Add50("Aerosoles",()=>Hazard50("Aerosoles","16 05 04*","🔥","INFLAMABLE · A PRESIÓN"));
+   Add50("Disolventes",()=>Hazard50("Disolventes","14 06 03*","🔥","INFLAMABLE · TÓXICO"));
+   Add50("Tóner y cartuchos",()=>Hazard50("Tóner y cartuchos","08 03 17*","⚠","NOCIVO"));
+   // Reciclaje.
+   Add50("Papel y cartón",()=>Recycle50("PAPEL Y\nCARTÓN","15 01 01"));
+   Add50("Plástico",()=>Recycle50("PLÁSTICO","15 01 02"));
+   Add50("Metales",()=>Recycle50("METALES","17 04 05"));
+   Add50("Madera",()=>Recycle50("MADERA","15 01 03"));
+   Add50("Vidrio",()=>Recycle50("VIDRIO","15 01 07"));
+   Add50("RAEE",()=>Recycle50("RAEE","20 01 36","🔌"));
+   Add50("Pilas usadas",()=>Recycle50("PILAS\nUSADAS","20 01 34","🔋"));
+   // Seguridad.
+   Add50("Riesgo eléctrico",()=>Sign50("⚡","RIESGO\nELÉCTRICO","Solo personal autorizado"));
+   Add50("Inflamable",()=>Sign50("🔥","INFLAMABLE","Prohibido fumar y encender fuego"));
+   Add50("Prohibido fumar",()=>Sign50("🚭","PROHIBIDO\nFUMAR",""));
+   Add50("Uso obligatorio de EPI",()=>Sign50("⛑","USO OBLIGATORIO\nDE EPI","Casco, chaleco y calzado"));
+   Add50("Prohibido el paso",()=>Sign50("🚫","PROHIBIDO\nEL PASO","Personal no autorizado"));
+   Add50("Punto de recogida",()=>Sign50("♻","PUNTO DE\nRECOGIDA","Pilas · Tóner · Fluorescentes"));
+   // Inventario, almacén y muestras (con QR o código de barras).
+   Add50("Propiedad de Azor (QR)",()=>Sticker(F(1,1,48,48,.6f),T("PROPIEDAD DE\nAZOR AMBIENTAL",2,2,46,9,9,true),Q("AZOR-INV-AZ-0001",13,11.5f,24),T("AZ-0001",2,36.5f,46,7,14,true),T("Nº de inventario",2,43.5f,46,4,6.5f)));
+   Add50("Equipo informático (QR)",()=>Sticker(F(1,1,48,48,.6f),T("EQUIPO INFORMÁTICO",2,2,46,5,9,true),Line(2,7.5f,46,.4f),L("PC-0001",3,9.5f,22,6,11,true),L("Usuario:",3,17,22,4,7),L("________",3,21,22,4,7),L("Alta:",3,26,22,4,7),L("__/__/____",3,30,22,4,7),Q("AZOR-IT-PC-0001",26,10,21),T("Soporte IT · Azor Ambiental",2,42,46,4.5f,6.5f)));
+   Add50("Ubicación (QR)",()=>Sticker(F(1,1,48,48,.6f),T("UBICACIÓN",2,2,46,5,8,true),T("A-01-01",2,7,46,9,20,true),Q("AZOR-UBI-A-01-01",14,17.5f,22),T("Estantería A · Nivel 1 · Hueco 1",2,41.5f,46,4.5f,6.5f)));
+   Add50("Muestra (QR)",()=>Sticker(F(1,1,48,48,.6f),T("MUESTRA",2,2,46,6,12,true),Line(2,8.5f,46,.4f),L("Ref.: AZ-0001",3,10.5f,44,5,8,true),L("Tipo: _______________",3,16,30,4.5f,7),L("Punto: ______________",3,21,30,4.5f,7),L("Fecha: __/__/____",3,26,30,4.5f,7),L("Técnico: ___________",3,31,30,4.5f,7),Q("AZOR-MUESTRA-AZ-0001",33,15.5f,14),T("Azor Ambiental",2,42,46,4.5f,7,true)));
+   Add50("Contenedor",()=>Sticker(F(1,1,48,48,.8f),T("CONTENEDOR",2,2,46,6,10,true),T("Nº 0001",2,8,46,10,20,true),B("CONT-0001",4,20,42,15),T("Azor Ambiental",2,40.5f,46,5,8,true)));
+   // Mantenimiento.
+   Add50("Calibrado",()=>Sticker(F(1,1,48,48,.8f),S("✓",15,2,20,14,26),T("CALIBRADO",2,16,46,8,14,true),L("Fecha: __/__/____",4,26,42,4.5f,8),L("Próxima: __/__/____",4,32,42,4.5f,8),L("Por: _____________",4,38,42,4.5f,8)));
+   Add50("Revisado",()=>Sticker(F(1,1,48,48,.8f),S("✓",15,2,20,14,26),T("REVISADO",2,16,46,8,14,true),L("Fecha: __/__/____",4,26,42,4.5f,8),L("Equipo: __________",4,32,42,4.5f,8),L("Firma: ___________",4,38,42,4.5f,8)));
+   Add50("Fuera de servicio",()=>Notice50("⛔","FUERA DE\nSERVICIO","Fecha: __/__/____","Firma: ___________"));
+   Add50("Cuarentena",()=>Notice50("⚠","CUARENTENA","Fecha: __/__/____","Resp.: ___________"));
+  }
   public static IList<CatalogItem> All {get{if(items.Count==0)Fill();return items;}}
 
   static void Fill(){
+   Fill50();
    // Residuos peligrosos. Códigos LER orientativos: revísalos con el responsable de medio ambiente.
    Add(0,"Residuo peligroso (genérico)",()=>Hazard("[Descripción del residuo]","[xx xx xx*]","⚠|Peligro"));
    Add(0,"Aceite usado",()=>Hazard("Aceite mineral usado","13 02 05*","⚠|Nocivo","🐟|Peligroso para el medio ambiente"));
@@ -128,7 +191,7 @@ namespace EtiquetaLocal {
    Add(8,"Taquilla",()=>Make(50,25,F(1,1,48,23,.5f),T("TAQUILLA",2,1.5f,46,5,9,true),T("Nº 01",2,7,46,8,16,true),T("[Nombre]",2,16,46,6,10)));
   }
 
-  public static void SelfTest(){foreach(var item in All){var l=item.Build();Model.Validate(Model.Load(Model.Save(l)));string problem=Editing.MarginProblem(l);if(problem!=null)throw new Exception("Plantilla «"+item.Name+"»: "+problem);}if(All.Count<40)throw new Exception("Catálogo incompleto");}
+  public static void SelfTest(){foreach(var item in All){var l=item.Build();Model.Validate(Model.Load(Model.Save(l)));string problem=Editing.MarginProblem(l);if(problem!=null)throw new Exception("Plantilla «"+item.Name+"»: "+problem);}if(All.Count<70||All.Count(i=>i.Category==Stickers)<25)throw new Exception("Catálogo incompleto");foreach(var i in All.Where(x=>x.Category==Stickers)){var l=i.Build();if(l.Width!=50||l.Height!=50)throw new Exception("La pegatina «"+i.Name+"» no mide 50 × 50 mm");}}
 
   // Miniatura de la plantilla (con borde de etiqueta y fondo blanco).
   public static Bitmap Thumbnail(Label label,int width,int height){
@@ -172,7 +235,7 @@ namespace EtiquetaLocal {
    Controls.Add(grid);Controls.Add(head);Controls.Add(line);Controls.Add(bottom);Controls.Add(nav);
    AcceptButton=use;CancelButton=cancel;
    FormClosed+=(s,e)=>{foreach(var b in thumbs.Values)b.Dispose();};
-   Select(null);
+   Select(AzorCatalog.Stickers);
   }
   Button NavButton(string text,string value){
    var b=new Button{Text="  "+text,TextAlign=ContentAlignment.MiddleLeft,Width=206,Height=40,FlatStyle=FlatStyle.Flat,ForeColor=Color.White,BackColor=Look.TealDark,Font=new Font("Segoe UI",10),Margin=new Padding(0,0,0,6),Cursor=Cursors.Hand,Tag=value,AccessibleName="Categoría "+text};

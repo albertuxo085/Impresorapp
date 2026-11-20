@@ -18,7 +18,7 @@ namespace EtiquetaLocal {
    try {byte[] row=new byte[Math.Abs(data.Stride)];for(int y=0;y<bitmap.Height;y++){Marshal.Copy(IntPtr.Add(data.Scan0,y*data.Stride),row,0,row.Length);for(int x=0;x<bitmap.Width;x++){int i=x*3;if(row[i]*114+row[i+1]*587+row[i+2]*299<128000)result[y*stride+x/8]|=(byte)(128>>(x%8));}}}finally{bitmap.UnlockBits(data);}return result;
   }
   public static byte[] Build(Label label,int dpmm,int copies){
-   Model.Validate(label);if(Model.Outside(label))throw new Exception("Hay elementos fuera de la etiqueta.");if(dpmm!=8&&dpmm!=12&&dpmm!=24)throw new Exception("Resolución no válida.");if(copies<1||copies>999)throw new Exception("Selecciona entre 1 y 999 copias.");
+   Model.Validate(label);if(dpmm!=8&&dpmm!=12&&dpmm!=24)throw new Exception("Resolución no válida.");if(copies<1||copies>999)throw new Exception("Selecciona entre 1 y 999 copias.");
    int width=(int)Math.Round(label.Width*dpmm),height=(int)Math.Round(label.Height*dpmm);if(width<1||height<1||(long)width*height>20000000)throw new Exception("El diseño supera el límite de 20 millones de puntos. Reduce tamaño o resolución.");
    using(var bitmap=new Bitmap(width,height,PixelFormat.Format24bppRgb)){
     using(var g=Graphics.FromImage(bitmap)){g.Clear(Color.White);g.TextRenderingHint=TextRenderingHint.SingleBitPerPixelGridFit;g.ScaleTransform(dpmm,dpmm);Render.Draw(g,label);}

@@ -70,6 +70,12 @@ namespace EtiquetaLocal {
    // Impresora e Imprimir a la derecha.
    var right=new FlowLayoutPanel{Dock=DockStyle.Right,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=false,BackColor=Look.Teal,Padding=new Padding(0,6,0,0)};
    printerChip.Margin=new Padding(0,0,8,0);right.Controls.Add(printerChip);
+   // Número de etiquetas que imprime el botón Imprimir.
+   var copiesPanel=new Panel{Width=72,Height=48,BackColor=Look.Teal,Margin=new Padding(0,0,8,0)};
+   copiesPanel.Controls.Add(new System.Windows.Forms.Label{Text="Copias",ForeColor=Color.FromArgb(205,230,234),Font=new Font("Segoe UI",8),AutoSize=false,Width=72,Height=16,Location=new Point(0,0),TextAlign=ContentAlignment.MiddleCenter});
+   copiesBox.Location=new Point(7,18);copiesPanel.Controls.Add(copiesBox);right.Controls.Add(copiesPanel);
+   Look.Tips.SetToolTip(copiesBox,"Número de etiquetas que se imprimirán al pulsar Imprimir");
+   printerChip.Width=280;Shown+=(s3,e3)=>{if(copiesBox.ContainsFocus)canvas.Focus();};
    if(printButton!=null){printButton.BackColor=Color.White;printButton.ForeColor=Look.Teal;printButton.FlatStyle=FlatStyle.Flat;printButton.FlatAppearance.BorderSize=0;printButton.Height=48;right.Controls.Add(printButton);Look.Tips.SetToolTip(printButton,"Imprimir ya en la impresora elegida (Ctrl+P)");}
    // Al lado de Imprimir: la ventana completa con vista previa, impresora, copias y preferencias.
    var options=new Button{Text="Vista previa\ny opciones",Width=112,Height=48,FlatStyle=FlatStyle.Flat,BackColor=Look.Teal,ForeColor=Color.White,Font=new Font("Segoe UI",9.5f),Margin=new Padding(8,0,0,0),Cursor=Cursors.Hand,AccessibleName="Vista previa y más opciones de impresión",AccessibleRole=AccessibleRole.PushButton};

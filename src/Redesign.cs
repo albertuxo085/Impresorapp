@@ -91,24 +91,29 @@ namespace EtiquetaLocal {
    var intro=new System.Windows.Forms.Label{Text="Elige cómo empezar. Puedes cambiar el tamaño y el contenido en cualquier momento.",ForeColor=Theme.Muted,AutoSize=true,Location=new Point(28,62)};
    Controls.Add(title);Controls.Add(intro);
    var options=new[]{
-    new{Icon="size",Title="Elegir tamaño",Hint="Etiqueta de rollo, cinta DYMO o papel A4 / A3.",Go=(Action)(()=>{if(ChooseSize!=null)ChooseSize();})},
+    new{Icon="size",Title="Elegir tamaño",Hint=Formats.SizeHint,Go=(Action)(()=>{if(ChooseSize!=null)ChooseSize();})},
     new{Icon="example",Title="Partir de un ejemplo",Hint="Un diseño ya hecho que puedes modificar.",Go=(Action)(()=>{if(LoadExample!=null)LoadExample();})},
     new{Icon="open",Title="Abrir un diseño",Hint="Un archivo .etiqueta que guardaste antes.",Go=(Action)(()=>{if(OpenDesign!=null)OpenDesign();})},
     new{Icon="bluetooth",Title="Imprimir en una DYMO",Hint="Conecta tu LetraTag por Bluetooth.",Go=(Action)(()=>{if(UseDymo!=null)UseDymo();})}
    };
-   int x=26;foreach(var o in options){var go=o.Go;var b=new Button{Location=new Point(x,100),Size=new Size(194,150),FlatStyle=FlatStyle.Flat,BackColor=Color.White,ForeColor=Theme.Ink,Cursor=Cursors.Hand,Text="",AccessibleName=o.Title+". "+o.Hint,AccessibleRole=AccessibleRole.PushButton,TabStop=true};b.FlatAppearance.BorderColor=Color.FromArgb(201,217,207);b.FlatAppearance.MouseOverBackColor=Theme.Surface;
+   int cardW=194;
+#if SENCILLA
+   // La edición Sencilla no imprime en DYMO.
+   options=options.Where(o=>o.Icon!="bluetooth").ToArray();
+#endif
+   int x=26;foreach(var o in options){var go=o.Go;var b=new Button{Location=new Point(x,100),Size=new Size(cardW,150),FlatStyle=FlatStyle.Flat,BackColor=Color.White,ForeColor=Theme.Ink,Cursor=Cursors.Hand,Text="",AccessibleName=o.Title+". "+o.Hint,AccessibleRole=AccessibleRole.PushButton,TabStop=true};b.FlatAppearance.BorderColor=Color.FromArgb(201,217,207);b.FlatAppearance.MouseOverBackColor=Theme.Surface;
     string icon=o.Icon,head=o.Title,hint=o.Hint;b.Paint+=(s,e)=>{var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;using(var bg=new SolidBrush(Theme.Soft))using(var path=StepsBar.Round(new Rectangle(16,16,42,42),10))g.FillPath(bg,path);using(var im=Ui.Icon(icon,Theme.Brand))g.DrawImage(im,27,27);
      using(var f=new Font("Segoe UI",11,FontStyle.Bold))TextRenderer.DrawText(g,head,f,new Rectangle(16,68,b.Width-28,24),Theme.Ink,TextFormatFlags.Left|TextFormatFlags.EndEllipsis);
      TextRenderer.DrawText(g,hint,b.Font,new Rectangle(16,94,b.Width-28,Math.Max(20,b.Height-98)),Theme.Muted,TextFormatFlags.Left|TextFormatFlags.WordBreak);if(b.Focused)ControlPaint.DrawFocusRectangle(g,new Rectangle(4,4,b.Width-8,b.Height-8));};
-    b.Click+=(s,e)=>go();Controls.Add(b);cards.Add(b);x+=204;}
+    b.Click+=(s,e)=>go();Controls.Add(b);cards.Add(b);x+=cardW+10;}
    close=new Button{Text="✕",Size=new Size(34,30),FlatStyle=FlatStyle.Flat,ForeColor=Theme.Muted,BackColor=Color.White,Cursor=Cursors.Hand,AccessibleName="Cerrar y empezar con la etiqueta en blanco",AccessibleRole=AccessibleRole.PushButton,Font=new Font("Segoe UI",11)};close.FlatAppearance.BorderSize=0;close.Click+=(s,e)=>{if(Closed!=null)Closed();};Controls.Add(close);new ToolTip().SetToolTip(close,"Cerrar y empezar con la etiqueta en blanco");
    note=new System.Windows.Forms.Label{Text="Solo aparece al abrir el programa. Ciérralo con ✕ para empezar en blanco.",ForeColor=Theme.Muted,AutoSize=true,Location=new Point(28,264)};Controls.Add(note);
    Arrange(900);
   }
   readonly List<Button> cards=new List<Button>();System.Windows.Forms.Label note;Button close;
   public bool Wanted;
-  // Cuatro tarjetas en fila si caben; si no, en dos filas de dos.
-  public void Arrange(int available){int cols=available>=880?4:2;int w=cols==4?194:Math.Max(180,Math.Min(250,(available-90)/2)),h=150;
+  // Todas las tarjetas en una fila si caben; si no, en filas de dos.
+  public void Arrange(int available){bool row=available>=880;int cols=row?cards.Count:2;int w=row?(cards.Count>=4?194:262):Math.Max(180,Math.Min(250,(available-90)/2)),h=150;
    for(int i=0;i<cards.Count;i++){cards[i].Size=new Size(w,h);cards[i].Location=new Point(26+(i%cols)*(w+10),100+(i/cols)*(h+10));}
    int rows=(cards.Count+cols-1)/cols;int bottom=100+rows*(h+10);note.Location=new Point(28,bottom+6);Size=new Size(52+cols*w+(cols-1)*10,bottom+44);close.Location=new Point(Width-close.Width-10,10);Invalidate();}
   protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);using(var p=new Pen(Color.FromArgb(201,217,207)))e.Graphics.DrawRectangle(p,0,0,Width-1,Height-1);}

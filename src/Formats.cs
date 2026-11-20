@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -10,6 +10,11 @@ namespace EtiquetaLocal {
   public override string ToString(){return Name;}
  }
  public static class Formats {
+#if SENCILLA
+  public const string SizeHint="Etiqueta de rollo o papel A4 / A3.",SizeList="rollos de etiquetas y papel A4 / A3";
+#else
+  public const string SizeHint="Etiqueta de rollo, cinta DYMO o papel A4 / A3.",SizeList="rollos de etiquetas, cinta DYMO y papel A4 / A3";
+#endif
   public static readonly LabelFormat[] All={
    new LabelFormat("Personalizado",0,0),
    new LabelFormat("Pequeña · 30 × 20 mm",30,20),new LabelFormat("Pequeña · 40 × 20 mm",40,20),

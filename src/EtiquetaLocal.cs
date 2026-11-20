@@ -145,7 +145,7 @@ namespace EtiquetaLocal {
   protected override void OnMouseUp(MouseEventArgs e){base.OnMouseUp(e);if(drag){drag=false;guideX=guideY=null;Capture=false;Invalidate();if(Changed!=null)Changed();}}
  }
  public partial class MainForm:Form {
-  bool welcomeDone;PrinterChip printerChip=new PrinterChip();StepsBar steps=new StepsBar();WelcomePanel welcome=new WelcomePanel();ToolTip chipTip=new ToolTip();
+  bool welcomeDone;NumericUpDown copiesBox=new NumericUpDown{Minimum=1,Maximum=999,Value=1,Width=58,Font=new Font("Segoe UI",12,FontStyle.Bold),TextAlign=HorizontalAlignment.Center,AccessibleName="Número de etiquetas que se imprimirán"};PrinterChip printerChip=new PrinterChip();StepsBar steps=new StepsBar();WelcomePanel welcome=new WelcomePanel();ToolTip chipTip=new ToolTip();
   List<Button> selectionButtons=new List<Button>();Button editButton;Control imageGroup;CheckBox guidesToggle;
   LetraTagPanel dymoPanel;Control canvasHost;Label label=new Label();Canvas canvas=new Canvas();PropertyGrid props=new PropertyGrid();ListBox items=new ListBox();ToolStripStatusLabel status=new ToolStripStatusLabel();
   ComboBox fontSelector=new ComboBox();NumericUpDown fontPoints=new NumericUpDown();CheckBox boldToggle=new CheckBox(),italicToggle=new CheckBox(),underlineToggle=new CheckBox(),aspectToggle=new CheckBox();ComboBox alignment=new ComboBox();bool formatSync;ComboBox presets=new ComboBox();NumericUpDown width=new NumericUpDown(),height=new NumericUpDown();bool syncing,dirty;string file="";Stack<string> undo=new Stack<string>();
@@ -181,7 +181,7 @@ var pr=new ToolStripMenuItem("&Impresoras");pr.DropDownItems.Add(MenuItem("Usar 
    steps.Tip="Consejo: haz doble clic en un texto para cambiarlo.";
    var tools=new FlowLayoutPanel{Dock=DockStyle.Left,Width=258,Padding=new Padding(10),BackColor=Color.FromArgb(242,247,244),FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true};
    var sizeTools=Ui.Section(tools,"1. Tamaño de la etiqueta");
-   sizeTools.Controls.Add(Ui.Hint("Incluye rollos de etiquetas, cinta DYMO y papel A4 / A3."));
+   sizeTools.Controls.Add(Ui.Hint("Incluye "+Formats.SizeList+"."));
    presets.DropDownStyle=ComboBoxStyle.DropDownList;presets.Width=218;presets.DropDownWidth=380;presets.Items.AddRange(Formats.All
 #if SENCILLA
 .Where(x=>!x.Dymo)
@@ -284,7 +284,7 @@ if(driver.Enabled){printerChip.Kind="print";printerChip.Caption="Imprimir con co
    printerChip.Value=p.Alias+(String.IsNullOrWhiteSpace(p.Location)?"":" · "+p.Location)+(p.Connection=="LAN"?" · por red":" · USB (pendiente)");
    chipTip.SetToolTip(printerChip,p.Alias+" · "+p.Connection+" · "+p.Address+(p.Connection=="LAN"?":"+p.Port:" · impresión USB pendiente")+"\nPulsa para cambiar de impresora.");
   }catch{printerChip.Caption="Imprimir en";printerChip.Value="No se pudo leer la impresora · Revisa Mis impresoras";}}
-  void UpdateStatus(){UpdatePrinterBanner();string problem=Editing.MarginProblem(label);status.Text=problem??"Doble clic en un texto para editarlo · Ctrl+S guardar · Ctrl+Z deshacer · Supr eliminar";status.ForeColor=problem!=null?Color.Firebrick:Color.FromArgb(40,75,57);
+  void UpdateStatus(){UpdatePrinterBanner();string problem=Editing.MarginProblem(label);status.Text=problem!=null?"Aviso: "+problem+" Al imprimir se recortará al borde.":"Doble clic en un texto para editarlo · Ctrl+S guardar · Ctrl+Z deshacer · Supr eliminar";status.ForeColor=problem!=null?Color.Firebrick:Color.FromArgb(40,75,57);
    steps.Current=label.Elements.Count==0?2:3;bool empty=label.Elements.Count==0;if(!empty)welcomeDone=true;bool show=empty&&!welcomeDone;welcome.Wanted=show;welcome.Visible=show;if(show)PlaceWelcome();}
   void PlaceWelcome(){if(!welcome.Wanted)return;welcome.Arrange(canvas.ClientSize.Width-30);welcome.Left=Math.Max(10,(canvas.ClientSize.Width-welcome.Width)/2);welcome.Top=Math.Max(10,(canvas.ClientSize.Height-welcome.Height)/2);welcome.BringToFront();}
   // Deja más espacio a los nombres de las propiedades (por defecto el grid los corta a la mitad).
@@ -346,11 +346,8 @@ decimal current=label.Media=="DYMO LT12"?(decimal)label.Width:60;using(var d=new
   bool Save(bool asNew){try{Model.Validate(label);string folder;try{folder=DesignStorage.EnsureDefaultFolder();}catch(Exception ex){MessageBox.Show(this,"No se pudo crear la carpeta de diseños. Puedes elegir otra ubicación.\n"+ex.Message,"Carpeta de diseños");folder=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);}using(var d=new SaveFileDialog{Title="Guardar diseño · Impresorapp",InitialDirectory=folder,RestoreDirectory=true,Filter="Diseños de etiquetas y carteles|*.etiqueta",DefaultExt="etiqueta",AddExtension=true,OverwritePrompt=true,FileName=String.IsNullOrEmpty(file)?"Mi diseño.etiqueta":Path.GetFileName(file)}){if(d.ShowDialog(this)!=DialogResult.OK)return false;DesignStorage.Write(d.FileName,Model.Save(label));file=d.FileName;}dirty=false;Text=AppVersion.Name+" "+AppVersion.Text+" · "+Path.GetFileName(file);return true;}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo guardar");return false;}}
   bool checkingUpdates;
   async Task CheckUpdates(bool automatic){
-#if SENCILLA
-if(automatic)return;MessageBox.Show(this,"Impresorapp Sencilla se actualiza instalando la versión nueva de Impresorapp Sencilla.","Actualizaciones");return;
-#endif
-if(checkingUpdates)return;checkingUpdates=true;try{string exe=await Updates.Check(this,automatic);if(exe==null||IsDisposed)return;if(MessageBox.Show(this,"La versión nueva está lista. ¿Guardar los cambios pendientes y abrirla ahora?","Actualizar Impresorapp",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;if(!Confirm())return;Updates.Launch(exe);dirty=false;Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo abrir la actualización");}finally{checkingUpdates=false;}}
-  Bitmap BuildDymoDesign(){Model.Validate(label);if(label.Media!="DYMO LT12")throw new Exception("Elige un formato DYMO LT en la columna Formato de etiqueta.");if(label.Elements.Count==0)throw new Exception("Añade texto, imágenes u otros elementos desde el editor.");string problem=Editing.MarginProblem(label);if(problem!=null)throw new Exception(problem);if(label.Width<25||label.Width>200||label.Height!=12)throw new Exception("La LetraTag usa cinta de 12 mm y longitudes de 25 a 200 mm.");int dots=(int)Math.Round(label.Width*200/25.4);var b=new Bitmap(dots+47,30);try{using(var g=Graphics.FromImage(b)){g.Clear(Color.White);g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;g.ScaleTransform(200f/25.4f,100f/25.4f);g.TranslateTransform(0,-2.2f);Render.Draw(g,label);}return b;}catch{b.Dispose();throw;}}
+if(checkingUpdates)return;checkingUpdates=true;try{string exe=await Updates.Check(this,automatic);if(exe==null||IsDisposed)return;if(MessageBox.Show(this,"La versión nueva está lista. ¿Guardar los cambios pendientes y abrirla ahora?","Actualizar "+AppVersion.Name,MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;if(!Confirm())return;Updates.Launch(exe);dirty=false;Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"No se pudo abrir la actualización");}finally{checkingUpdates=false;}}
+  Bitmap BuildDymoDesign(){Model.Validate(label);if(label.Media!="DYMO LT12")throw new Exception("Elige un formato DYMO LT en la columna Formato de etiqueta.");if(label.Elements.Count==0)throw new Exception("Añade texto, imágenes u otros elementos desde el editor.");if(label.Width<25||label.Width>200||label.Height!=12)throw new Exception("La LetraTag usa cinta de 12 mm y longitudes de 25 a 200 mm.");int dots=(int)Math.Round(label.Width*200/25.4);var b=new Bitmap(dots+47,30);try{using(var g=Graphics.FromImage(b)){g.Clear(Color.White);g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;g.ScaleTransform(200f/25.4f,100f/25.4f);g.TranslateTransform(0,-2.2f);Render.Draw(g,label);}return b;}catch{b.Dispose();throw;}}
   async void LetraTag(){try{if(label.Media!="DYMO LT12"){ConnectDymo();return;}ShowDymoSelection();if(!dymoPanel.HasSelection)ConnectDymo();if(dymoPanel!=null&&dymoPanel.HasSelection)await dymoPanel.PrintCurrent();}catch(Exception ex){MessageBox.Show(ex.Message,"DYMO");}}
 
   void OpenPrinters(){
@@ -360,9 +357,11 @@ DriverPrinting.Select(this,label);UpdatePrinterBanner();return;
 string choice;using(var d=new Discovery()){d.ShowDialog(this);choice=d.Choice;}if(choice=="dymo-connect")ConnectDymo();else if(choice=="dymo-use"){var saved=DymoStore.Load();if(saved==null)ConnectDymo();else{SwitchToDymo(label.Media=="DYMO LT12"?(decimal)label.Width:60);if(dymoPanel!=null)dymoPanel.UseDevice(saved);}}else if(choice=="printer"){DriverPrinting.UseDirect();OfferRollFormat();}UpdatePrinterBanner();}
   void PrintWindows(){if(!DriverPrinting.Load().Enabled){DriverPrinting.Select(this,label);UpdatePrinterBanner();if(!DriverPrinting.Load().Enabled)return;}PrintDriver();}
   // Imprimir: envía directamente a la impresora con controlador guardada, sin vista previa.
-  void PrintDriver(){try{if(!CheckInside())return;DriverPrinting.PrintNow(this,label);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir con controlador");}}
+  void PrintDriver(){try{if(!CheckInside())return;DriverPrinting.PrintNow(this,label,(short)copiesBox.Value);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Imprimir con controlador");}}
   // Comprueba que nada quede fuera; si algo queda fuera, lo selecciona y lo explica.
-  bool CheckInside(){if(label.Elements.Count==0){MessageBox.Show(this,"Añade algún elemento antes de imprimir.","Imprimir");return false;}var outside=FirstOutside();if(outside==null)return true;canvas.Selected=outside;RefreshAll();MessageBox.Show(this,"«"+outside.Kind+" · "+(outside.Text??"")+"» queda fuera de la etiqueta (al menos una parte de lo que se imprime).\n\nLo he seleccionado. Arrástralo dentro de la etiqueta o elimínalo, y vuelve a pulsar Imprimir.","Imprimir");return false;}
+  // Lo que sobresale de la etiqueta se recorta al imprimir. Se pregunta una vez por cada estado del diseño.
+  string cropAccepted;
+  bool CheckInside(){if(label.Elements.Count==0){MessageBox.Show(this,"Añade algún elemento antes de imprimir.","Imprimir");return false;}var outside=FirstOutside();if(outside==null)return true;string state=Model.Save(label);if(state==cropAccepted)return true;if(MessageBox.Show(this,"«"+outside.Kind+" · "+(outside.Text??"")+"» sobresale de la etiqueta. Lo que quede fuera no se imprimirá (se recorta al borde).\n\n¿Imprimir igualmente?","Imprimir",MessageBoxButtons.YesNo,MessageBoxIcon.Question,MessageBoxDefaultButton.Button1)==DialogResult.Yes){cropAccepted=state;return true;}canvas.Selected=outside;RefreshAll();return false;}
   // Vista previa y opciones: la ventana completa (impresora, copias, preferencias y vista previa).
   void PrintOptions(){
 #if SENCILLA
@@ -377,9 +376,9 @@ string choice;using(var d=new Discovery()){d.ShowDialog(this);choice=d.Choice;}i
   async void QuickZpl(SavedPrinter p){try{
     if(label.Width>(float)p.MaxWidth)throw new Exception("La etiqueta ("+label.Width+" mm) supera el ancho imprimible de "+p.Alias+" ("+p.MaxWidth+" mm).");
     if(p.Profile==1&&(label.Width<25.4f||label.Height<7.8f||label.Height>995))throw new Exception("El perfil Toshiba B-FV4D-GS admite anchos desde 25,4 mm y largos de 7,8 a 995 mm.");
-    var payload=Direct.Build(label,p.Dots,1);status.Text="Enviando a "+p.Alias+"…";Cursor=Cursors.WaitCursor;
+    int copies=(int)copiesBox.Value;var payload=Direct.Build(label,p.Dots,copies);status.Text="Enviando a "+p.Alias+"…";Cursor=Cursors.WaitCursor;
     await Task.Run(()=>Direct.Send(p.Address,p.Port,payload));
-    status.Text="Etiqueta enviada a "+p.Alias+". Comprueba la salida de la impresora.";
+    status.Text=(copies==1?"Etiqueta enviada a ":copies+" etiquetas enviadas a ")+p.Alias+". Comprueba la salida de la impresora.";
    }catch(Exception ex){status.Text="No se ha confirmado el envío a "+p.Alias+".";
     if(MessageBox.Show(this,ex.GetBaseException().Message+"\n\nSi hubo un envío parcial, revisa la impresora antes de repetir.\n\n¿Abrir «Vista previa y opciones» (incluye imprimir con el controlador de Windows)?","Imprimir",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)PrintOptions();
    }finally{Cursor=Cursors.Default;}}
@@ -388,14 +387,20 @@ string choice;using(var d=new Discovery()){d.ShowDialog(this);choice=d.Choice;}i
 #if SENCILLA
 if(label.Media!="PAPER"){PrintWindows();return;}
 #endif
-if(label.Media=="PAPER"){PrintPaper();return;}if(label.Media=="DYMO LT12"){LetraTag();return;}if(DriverPrinting.Load().Enabled){PrintDriver();return;}try{Model.Validate(label);if(label.Elements.Count==0)throw new Exception("Añade algún elemento antes de imprimir.");var outside=FirstOutside();if(outside!=null){canvas.Selected=outside;RefreshAll();throw new Exception("«"+outside.Kind+" · "+(outside.Text??"")+"» queda fuera de la etiqueta (al menos una parte de lo que se imprime).\n\nLo he seleccionado en «Elementos del diseño». Arrástralo dentro de la etiqueta o elimínalo, y vuelve a pulsar Imprimir.");}
+if(label.Media=="PAPER"){PrintPaper();return;}if(label.Media=="DYMO LT12"){LetraTag();return;}if(DriverPrinting.Load().Enabled){PrintDriver();return;}try{Model.Validate(label);if(label.Elements.Count==0)throw new Exception("Añade algún elemento antes de imprimir.");if(!CheckInside())return;
    var preferred=SavedPrinters.Load().Preferred;if(preferred!=null&&preferred.NoZpl){DriverHelp.Offer(this,preferred,PrintDriver);return;}
    // Impresora de red ya comprobada: se envía directamente. Si aún no está configurada, se abre la ventana de envío una vez.
    if(preferred!=null&&preferred.Connection=="LAN"&&preferred.Configured){QuickZpl(preferred);return;}
    using(var f=new DirectPrintForm(label,"",preferred))f.ShowDialog(this);UpdatePrinterBanner();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Impresión directa");}}
   // Primer elemento cuyo contenido impreso queda fuera de la etiqueta.
   Element FirstOutside(){foreach(var e in label.Elements){var single=new Label{Media=label.Media,Width=label.Width,Height=label.Height};single.Elements.Add(e);if(Editing.MarginProblem(single)!=null)return e;}return null;}
-  void Help(){MessageBox.Show(this,"1. TAMAÑO: en la columna de la izquierda elige un formato (rollo de etiquetas, cinta DYMO o papel A4 / A3). Para una medida libre, escribe ancho y alto y pulsa Aplicar medida personalizada.\n\n2. CONTENIDO: en la pestaña Inicio pulsa Texto, Imagen, Código de barras, QR, Emojis, Marco o Línea. Arrastra para mover y haz doble clic en un texto para cambiarlo. A la derecha puedes ajustar cada elemento por secciones. La pestaña Posición centra elementos y activa las guías.\n\n3. IMPRIMIR: arriba a la derecha verás en qué impresora se imprimirá. Pulsa sobre ella para cambiarla (Mis impresoras, búsqueda en la red o DYMO por Bluetooth) y después pulsa Imprimir.\n\nAtajos: Ctrl+N nueva · Ctrl+O abrir · Ctrl+S guardar · Ctrl+P imprimir · Ctrl+Z deshacer · Supr eliminar · F1 esta ayuda.\n\nEl rollo físico debe coincidir con las medidas del diseño. No se busca en la red automáticamente.","Guía rápida · Impresorapp · Alberto Marín (albertuxo85)");}
+  void Help(){MessageBox.Show(this,"1. TAMAÑO: en la columna de la izquierda elige un formato ("+Formats.SizeList+"). Para una medida libre, escribe ancho y alto y pulsa Aplicar medida personalizada.\n\n2. CONTENIDO: en la pestaña Inicio pulsa Texto, Imagen, Código de barras, QR, Emojis, Marco o Línea. Arrastra para mover y haz doble clic en un texto para cambiarlo. A la derecha puedes ajustar cada elemento por secciones. La pestaña Posición centra elementos y activa las guías.\n\n3. IMPRIMIR: arriba a la derecha verás en qué impresora se imprimirá. Pulsa sobre ella para cambiarla ("+
+#if SENCILLA
+"impresoras instaladas en Windows"+
+#else
+"Mis impresoras, búsqueda en la red o DYMO por Bluetooth"+
+#endif
+") y después pulsa Imprimir.\n\nAtajos: Ctrl+N nueva · Ctrl+O abrir · Ctrl+S guardar · Ctrl+P imprimir · Ctrl+Z deshacer · Supr eliminar · F1 esta ayuda.\n\nEl rollo físico debe coincidir con las medidas del diseño. No se busca en la red automáticamente.","Guía rápida · Impresorapp · Alberto Marín (albertuxo85)");}
  }
  public class Found {public string Name,Address,Detail,Kind,DeviceName,Location,MetadataSource;public bool Verified;public int[] Ports=new int[0];}
  public static class Network {

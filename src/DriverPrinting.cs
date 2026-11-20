@@ -40,14 +40,14 @@ namespace EtiquetaLocal {
   static PointF DeviceOrigin(Graphics graphics){var hdc=graphics.GetHdc();try{return new PointF(OffsetMm(GetDeviceCaps(hdc,112),GetDeviceCaps(hdc,88)),OffsetMm(GetDeviceCaps(hdc,113),GetDeviceCaps(hdc,90)));}finally{graphics.ReleaseHdc(hdc);}}
   // Botón Imprimir: envía directamente a la impresora guardada (1 copia), sin vista previa.
   // Si todavía no hay impresora elegida, abre la ventana de opciones.
-  public static void PrintNow(IWin32Window owner,Label original){
-   Model.Validate(original);if(original.Elements.Count==0||Model.Outside(original))throw new Exception("Añade contenido y comprueba que queda dentro de la etiqueta.");
+  public static void PrintNow(IWin32Window owner,Label original,short copies=1){if(copies<1||copies>999)throw new Exception("Elige entre 1 y 999 etiquetas.");
+   Model.Validate(original);if(original.Elements.Count==0)throw new Exception("Añade contenido antes de imprimir.");
    var saved=Load();if(!saved.Enabled||String.IsNullOrWhiteSpace(saved.Printer)){Show(owner,original);return;}
    var label=Model.Load(Model.Save(original));
-   using(var pixels=Rasterize(label,203))SendResponsive(owner,new PrintChoice{Printer=saved.Printer,Copies=1},label,pixels);
+   using(var pixels=Rasterize(label,203))SendResponsive(owner,new PrintChoice{Printer=saved.Printer,Copies=copies},label,pixels);
   }
   public static void Show(IWin32Window owner,Label original){
-   Model.Validate(original);if(original.Elements.Count==0||Model.Outside(original))throw new Exception("Añade contenido y comprueba que queda dentro de la etiqueta.");
+   Model.Validate(original);if(original.Elements.Count==0)throw new Exception("Añade contenido antes de imprimir.");
    var label=Model.Load(Model.Save(original));var selection=ChooseLocal(owner,label,false);if(selection==null)return;
    using(var f=new Form{Text="Vista previa del diseño · "+selection.Printer,Width=1000,Height=800,StartPosition=FormStartPosition.CenterParent,Icon=Branding.AppIcon,BackColor=Color.FromArgb(242,247,244)}){
     var bar=new FlowLayoutPanel{Dock=DockStyle.Top,Height=78,Padding=new Padding(10),AutoSize=false};

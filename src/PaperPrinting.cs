@@ -20,7 +20,7 @@ namespace EtiquetaLocal {
    }
   }
   public static void Show(IWin32Window owner,Label original){
-   Model.Validate(original);if(original.Elements.Count==0||Model.Outside(original))throw new Exception("Añade el contenido y comprueba que queda dentro del papel.");
+   Model.Validate(original);if(original.Elements.Count==0)throw new Exception("Añade contenido antes de imprimir.");
    var label=Model.Load(Model.Save(original));using(var doc=new PrintDocument()){
     doc.DocumentName="Cartel · EtiquetaLocal";if(!Choose(owner,doc,label))return;
     bool landscape=label.Width>label.Height;float paperW=Math.Min(label.Width,label.Height),paperH=Math.Max(label.Width,label.Height);
