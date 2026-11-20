@@ -1,3 +1,11 @@
+## Versión 1.1: copias, pegatinas de 50 × 50 mm e imprimir aunque algo sobresalga
+
+- Junto al botón **Imprimir** hay un selector **Copias** (1 a 999): Imprimir envía directamente ese número de etiquetas, sin abrir ninguna ventana. Funciona con impresoras con controlador de Windows y por red (ZPL).
+- **Pegatinas de 50 × 50 mm** en el Catálogo de etiquetas: 31 plantillas nuevas (residuos peligrosos, reciclaje, seguridad, inventario con QR, ubicación, muestras, contenedor, calibrado, revisado, fuera de servicio y cuarentena). El catálogo se abre directamente en esta categoría.
+- **Se puede imprimir aunque algo sobresalga de la etiqueta.** La app avisa una vez («¿Imprimir igualmente?») y lo que quede fuera se recorta al borde.
+- **Impresorapp Sencilla ya no muestra la DYMO** (ni en la bienvenida, ni en los formatos, ni en la ayuda): imprime solo en impresoras instaladas en Windows y en papel.
+- **Impresorapp Sencilla también se actualiza sola** desde *Ayuda › Buscar actualizaciones…*, igual que la completa. Cada variante descarga su propio paquete, así que la Sencilla sigue siendo Sencilla. Desde la 1.0 Sencilla hay que instalar la 1.1 una vez a mano; a partir de ahí ya se actualiza sola.
+
 ## Versión 1.0: versión definitiva
 
 - **Imprimir directo**: el botón Imprimir envía la etiqueta a la impresora elegida (1 copia) sin ventanas intermedias. Al lado, **Vista previa y opciones** abre la vista previa, la impresora, las copias y las preferencias (también Ctrl+Mayús+P).
@@ -27,7 +35,7 @@ Esta distribución 0.25 no tiene firma Authenticode. El certificado Seagull usad
 
 Distribución 0.25 preparada en este entorno sin firma Authenticode: el proveedor de la clave del certificado instalado no permite firmar aquí. El script sign.ps1 sigue disponible para firmar desde el equipo/entorno que tenga acceso a esa clave. No se han exportado certificados ni claves privadas.
 
-<!-- Versión actual: 1.0 -->
+<!-- Versión actual: 1.1 -->
 
 ## Ruta de controlador incorporada en 0.24
 
@@ -47,7 +55,7 @@ Comprobados: conversión mm/unidades Windows, correspondencia de tamaños, recha
 
 ## Español
 
-Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 1.0.**
+Editor de etiquetas y carteles para Windows 10/11 de 64 bits. **Versión 1.1.**
 
 Autor: **Alberto Marín (albertuxo85)**.
 
@@ -59,7 +67,7 @@ Diseña etiquetas con texto, imágenes, códigos QR, Code 39, emojis, marcos y l
 
 ### Instalar
 
-1. Descarga **`Impresorapp-1.0-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Descarga **`Impresorapp-1.1-Setup.exe`** desde [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Ejecútalo. Se instala para el usuario actual en `%LOCALAPPDATA%\Programs\Impresorapp`, sin pedir permisos de administrador, con acceso en el menú Inicio y, si quieres, en el escritorio.
 3. Necesita .NET Framework 4.8 (incluido en Windows 10/11 actualizados; el instalador avisa si falta).
 
@@ -130,7 +138,7 @@ Design labels with text, images, QR codes, Code 39, emojis, frames and lines, wi
 
 ### Install
 
-1. Download **`Impresorapp-1.0-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
+1. Download **`Impresorapp-1.1-Setup.exe`** from [Releases](https://github.com/albertuxo085/Impresorapp/releases/latest).
 2. Run it. It installs for the current user in `%LOCALAPPDATA%\Programs\Impresorapp`, without administrator rights, with a Start menu shortcut and an optional desktop shortcut.
 3. Requires .NET Framework 4.8 (included in up-to-date Windows 10/11; the installer warns if it is missing).
 

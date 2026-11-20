@@ -1,3 +1,11 @@
+## Versión 1.1: copias, pegatinas de 50 × 50 mm e imprimir aunque algo sobresalga
+
+- Junto al botón **Imprimir** hay un selector **Copias** (1 a 999): Imprimir envía directamente ese número de etiquetas, sin abrir ninguna ventana. Funciona con impresoras con controlador de Windows y por red (ZPL).
+- **Pegatinas de 50 × 50 mm** en el Catálogo de etiquetas: 31 plantillas nuevas (residuos peligrosos, reciclaje, seguridad, inventario con QR, ubicación, muestras, contenedor, calibrado, revisado, fuera de servicio y cuarentena). El catálogo se abre directamente en esta categoría.
+- **Se puede imprimir aunque algo sobresalga de la etiqueta.** La app avisa una vez («¿Imprimir igualmente?») y lo que quede fuera se recorta al borde.
+- **Impresorapp Sencilla ya no muestra la DYMO** (ni en la bienvenida, ni en los formatos, ni en la ayuda): imprime solo en impresoras instaladas en Windows y en papel.
+- **Impresorapp Sencilla también se actualiza sola** desde *Ayuda › Buscar actualizaciones…*, igual que la completa. Cada variante descarga su propio paquete, así que la Sencilla sigue siendo Sencilla. Desde la 1.0 Sencilla hay que instalar la 1.1 una vez a mano; a partir de ahí ya se actualiza sola.
+
 ## Versión 1.0: versión definitiva
 
 - **Imprimir directo**: el botón Imprimir envía la etiqueta a la impresora elegida (1 copia) sin ventanas intermedias. Al lado, **Vista previa y opciones** abre la vista previa, la impresora, las copias y las preferencias (también Ctrl+Mayús+P).
